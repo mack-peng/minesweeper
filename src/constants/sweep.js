@@ -35,6 +35,10 @@ const modeEnum = {
 const buttonList = [{
   label: '重新开始 (RESTART)',
   type: 'restart'
+},
+{
+  label: '🚩 插旗模式 (FLAG)',
+  type: 'flagMode'
 }];
 
 export {

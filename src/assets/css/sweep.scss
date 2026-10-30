@@ -16,17 +16,18 @@
 .board {
   border: 1px solid #888;
   margin: 10px auto;
-  --cell: clamp(14px, 2.1vw, 20px);
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 40), 1fr);
 }
 
 .sigleCheck {
   text-align: center;
-  width: var(--cell);
-  height: var(--cell);
-  font-size: calc(var(--cell) * 0.6);
-  line-height: var(--cell);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(8px, 1.6vw, 12px);
   border: 1px solid #eee;
-  float: left;
   user-select: none;
 }
 

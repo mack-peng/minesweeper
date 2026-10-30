@@ -192,7 +192,7 @@ export default {
       return count < 0 ? 0 : count;
     },
     boardStyle() {
-      return { width: `calc(${this.boardSize[0]} * var(--cell, 20px))` };
+      return { "--cols": this.boardSize[0] };
     },
   },
   methods: {
