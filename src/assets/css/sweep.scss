@@ -3,28 +3,23 @@
 }
 
 .board-panel {
-  width: min(100%, 860px);
+  width: 100%;
   display: flex;
 }
 
+/* 格子随屏宽连续缩放：可用宽 / 列数，封顶 36px、下限 6px（hell 45 列也放得下） */
 .board {
   --cols: 10;
-  --cell-max: 20px;
+  --cell: clamp(6px, calc((100vw - 28px) / var(--cols)), 36px);
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
-  width: min(100%, calc(var(--cols) * var(--cell-max) + 2px));
+  width: calc(var(--cols) * var(--cell) + 2px);
+  max-width: calc(100vw - 28px);
   margin: auto;
   border: 1px solid var(--ui-line);
-  border-radius: 10px;
+  border-radius: clamp(8px, 1.2vw, 12px);
   overflow: hidden;
   background: rgba(15, 23, 42, 0.45);
-}
-
-/* 平板：格子放大到 36px（触控友好，游戏区更高） */
-@media (min-width: 768px) and (max-width: 1023.98px) {
-  .board {
-    --cell-max: 36px;
-  }
 }
 
 .sigleCheck {
@@ -32,7 +27,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(9px, 1.6vw, 13px);
+  font-size: clamp(8px, calc(var(--cell) * 0.55), 14px);
   font-weight: 700;
   color: var(--ui-text);
   border: 1px solid rgba(148, 163, 184, 0.12);

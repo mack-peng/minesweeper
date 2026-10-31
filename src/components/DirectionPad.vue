@@ -20,10 +20,11 @@ export default {
 
 <style scoped lang="scss">
 .dpad {
+  --pad: clamp(44px, 14vw, 64px);
   display: grid;
-  grid-template-columns: repeat(3, 64px);
-  grid-template-rows: repeat(2, 56px);
-  gap: 8px;
+  grid-template-columns: repeat(3, var(--pad));
+  grid-template-rows: repeat(2, calc(var(--pad) * 0.9));
+  gap: clamp(4px, 1vw, 8px);
   justify-content: center;
   user-select: none;
   touch-action: manipulation;
@@ -34,7 +35,7 @@ export default {
   box-shadow: 2px 2px 0 #41403e;
   background: #fafafa;
   color: #41403e;
-  font-size: 20px;
+  font-size: clamp(14px, 3.2vw, 18px);
   cursor: pointer;
 }
 .pad:active {
