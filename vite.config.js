@@ -13,4 +13,11 @@ export default defineConfig({
       "@mixin-scss": path.resolve(__dirname, "src/utils/common.scss"),
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: "modern-compiler",
+      },
+    },
+  },
 });
