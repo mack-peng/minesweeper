@@ -336,11 +336,12 @@ export default {
     clickBoard(e, item) {
       const { gameIsOver, flagMode } = this;
       if (gameIsOver) return;
-      if (item.isFlag) return;
+      // 插旗模式下点击即切换旗子（含取消旗子）
       if (flagMode) {
         this.insertFlag(item);
         return;
       }
+      if (item.isFlag) return;
       if (e.button != 0) return;
       item.isCheck = true;
       switch (item.type) {
