@@ -1,74 +1,16 @@
 <template>
   <div class="snake_bg">
     <div class="w1440">
-      <div class="row site">
-        <div
-          class="sm-12 md-3 col sidebar"
-          v-first="{
-            name: 'translateLeft',
-            duration: '0.5s',
-            delay: '0.2s',
-            offset: '0',
-          }"
-        >
-          <div
-            class="paper"
-            v-first="{
-              name: 'translateTop',
-              duration: '0.5s',
-              delay: '0.5s',
-              offset: '0',
-            }"
-          >
-            <h3 class="sidebar_h3">扫雷</h3>
-            <h3 class="sidebar-title sidebar_h3">Mine Clearance</h3>
-            <div class="row">
-              <div
-                class="collapsible full-width"
-                v-for="(item, idx) in sidebar"
-                :key="idx"
-                v-first="{
-                  name: 'translateTop',
-                  duration: '0.5s',
-                  delay: `${0.7 + idx * 0.2}s`,
-                  offset: '0',
-                }"
-              >
-                <input
-                  :id="`collapsible-${item.title}`"
-                  type="radio"
-                  name="collapsible"
-                />
-                <label :for="`collapsible-${item.title}`">{{
-                  item.title
-                }}</label>
-                <div class="collapsible-body">
-                  <ul>
-                    <li
-                      class="paper_li"
-                      v-for="(child, cIdx) in item.children"
-                      :key="cIdx"
-                      @click="sideBarMethod(child)"
-                    >
-                      {{ child.label }}
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div
-          class="sm-12 md-9 col"
-          v-first="{
-            name: 'translateRight',
-            duration: '0.5s',
-            delay: '0.5s',
-            offset: '0',
-          }"
-        >
-          <div class="paper">
-            <div class="config-select-bar">
+      <div
+        class="paper game-paper"
+        v-first="{
+          name: 'translateRight',
+          duration: '0.5s',
+          delay: '0.5s',
+          offset: '0',
+        }"
+      >
+        <div class="config-select-bar">
               <ConfigSelect
                 title="难度"
                 :options="difficultyOptions"
@@ -140,8 +82,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
 </template>
 
 <script>
@@ -156,7 +96,6 @@ export default {
   data() {
     return {
       defaultMode: "crazy",
-      sidebar: SWEEP.sidebar,
       buttonList: SWEEP.buttonList,
       difficultyOptions: SWEEP.sidebar[0].children,
       boardSize: [0, 0],
@@ -170,6 +109,10 @@ export default {
     };
   },
   created() {
+    // 移动端默认普通难度（小屏格子过小不可玩）
+    if (window.matchMedia("(max-width: 767.98px)").matches) {
+      this.defaultMode = "normal";
+    }
     this.setInitMode();
     this.initBoard();
   },

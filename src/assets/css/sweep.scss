@@ -16,6 +16,7 @@
 .board {
   border: 1px solid #888;
   margin: 10px auto;
+  width: min(100%, calc(var(--cols, 40) * 20px + 2px));
   display: grid;
   grid-template-columns: repeat(var(--cols, 40), 1fr);
 }
