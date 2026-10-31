@@ -38,6 +38,7 @@
 <script>
 import moment from "moment";
 import { SWEEP } from "@constants";
+import { deviceClass, onDeviceClassChange } from "../../utils/device.js";
 import { $animate } from "../../mixins/index.js";
 import ConfigSelect from "../../components/ConfigSelect.vue";
 export default {
@@ -59,18 +60,38 @@ export default {
     };
   },
   created() {
-    // 默认难度按屏宽：手机 normal（格子过小不可玩）/ 平板 hard（大格子）/ 桌面 crazy
-    const width = window.innerWidth;
-    this.defaultMode = width < 768 ? "normal" : width < 1024 ? "hard" : "crazy";
+    // 默认难度按设备档位：手机 normal / 平板 hard / 桌面 crazy（用户手动选择后不再覆盖）
+    this.difficultyByDevice = true;
+    this.defaultMode = this.deviceMode();
     this.setInitMode();
     this.initBoard();
   },
   mounted() {
     this.bindKeyboard();
+    this.offDevice = onDeviceClassChange(() => {
+      if (!this.difficultyByDevice) return;
+      const mode = this.deviceMode();
+      if (mode === this.defaultMode) return;
+      this.defaultMode = mode;
+      this.gameIsOver = false;
+      this.setInitMode();
+      this.initBoard();
+      const labels = { normal: "普通", hard: "困难", crazy: "疯狂" };
+      this.HiAlert({
+        type: "secondary",
+        content: `已按屏幕调整为${labels[mode]}难度`,
+        clear: true,
+      });
+    });
   },
   unmounted() {
     clearInterval(this.elapsedTimer);
     document.onkeydown = null;
+    document.onmouseup = null;
+    if (this.offDevice) {
+      this.offDevice();
+      this.offDevice = null;
+    }
   },
   computed: {
     theRestOfMine() {
@@ -91,6 +112,14 @@ export default {
     },
   },
   methods: {
+    /**
+     * 设备档位对应的默认难度
+     */
+    deviceMode() {
+      const cls = deviceClass();
+      return cls === "phone" ? "normal" : cls === "tablet" ? "hard" : "crazy";
+    },
+
     /**
      * 设置初始难度，雷，棋盘样式
      */
@@ -537,6 +566,7 @@ export default {
      */
     pickDifficulty({ mode, label }) {
       const { modeEnum } = SWEEP;
+      this.difficultyByDevice = false;
       this.gameIsOver = false;
       this.defaultMode = mode;
 
