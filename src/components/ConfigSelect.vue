@@ -1,9 +1,9 @@
 <template>
   <label class="config-select">
     <span class="config-select_title" v-if="title">{{ title }}</span>
-    <select class="select" :value="value" @change="apply($event)">
-      <option disabled value="">-- {{ title }} --</option>
-      <option v-for="o in options" :key="o.label" :value="o">{{ o.label }}</option>
+    <select class="select" :value="current" @change="apply($event)">
+      <option disabled value="">{{ placeholder }}</option>
+      <option v-for="o in options" :key="o.mode" :value="o.mode">{{ o.label }}</option>
     </select>
   </label>
 </template>
@@ -14,15 +14,17 @@ export default {
   props: {
     title: { type: String, default: "选项" },
     options: { type: Array, required: true },
+    current: { type: String, default: "" },
   },
-  data() {
-    return { value: "" };
+  computed: {
+    placeholder() {
+      return `-- ${this.title} --`;
+    },
   },
   methods: {
     apply(e) {
-      const item = this.options[e.target.selectedIndex - 1];
+      const item = this.options.find((o) => o.mode === e.target.value);
       if (item) {
-        this.value = item;
         this.$emit("apply", item);
       }
     },

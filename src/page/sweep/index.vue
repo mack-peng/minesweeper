@@ -5,7 +5,12 @@
       <span class="chip">剩余 {{ theRestOfMine }}</span>
       <span class="chip">{{ elapsedTime }}</span>
       <div class="hud_spacer"></div>
-      <ConfigSelect title="难度" :options="difficultyOptions" @apply="sideBarMethod" />
+      <ConfigSelect
+        title="难度"
+        :options="difficultyOptions"
+        :current="defaultMode"
+        @apply="sideBarMethod"
+      />
       <button class="btn" :class="{ 'btn--on': flagMode }" @click="toggleFlagMode">
         🚩 插旗模式
       </button>
@@ -32,7 +37,6 @@
       </div>
     </main>
   </div>
-</template>
 </template>
 
 <script>
@@ -621,5 +625,5 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-@import "@style/sweep.scss";
+@use "@style/sweep.scss";
 </style>

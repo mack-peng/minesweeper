@@ -135,9 +135,9 @@
   opacity: 0;
 }
 
-/* 手机：标题独占一行（布局语义，非尺寸） */
+/* 手机：标题隐藏（布局语义，非尺寸） */
 @media (max-width: 767.98px) {
   .hud_title {
-    width: 100%;
+    display: none;
   }
 }
