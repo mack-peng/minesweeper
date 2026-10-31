@@ -59,10 +59,9 @@ export default {
     };
   },
   created() {
-    // 移动端默认普通难度（小屏格子过小不可玩）
-    if (window.matchMedia("(max-width: 767.98px)").matches) {
-      this.defaultMode = "normal";
-    }
+    // 默认难度按屏宽：手机 normal（格子过小不可玩）/ 平板 hard（大格子）/ 桌面 crazy
+    const width = window.innerWidth;
+    this.defaultMode = width < 768 ? "normal" : width < 1024 ? "hard" : "crazy";
     this.setInitMode();
     this.initBoard();
   },

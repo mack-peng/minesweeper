@@ -9,14 +9,22 @@
 
 .board {
   --cols: 10;
+  --cell-max: 20px;
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
-  width: min(100%, calc(var(--cols) * 24px + 2px));
+  width: min(100%, calc(var(--cols) * var(--cell-max) + 2px));
   margin: auto;
   border: 1px solid var(--ui-line);
   border-radius: 10px;
   overflow: hidden;
   background: rgba(15, 23, 42, 0.45);
+}
+
+/* 平板：格子放大到 36px（触控友好，游戏区更高） */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .board {
+    --cell-max: 36px;
+  }
 }
 
 .sigleCheck {
@@ -78,4 +86,20 @@
 .flag {
   background: url("@image/sweep/flag.png") no-repeat center center;
   background-size: 70% 70%;
+}
+
+/* 移动端 HUD：chips 一行，下拉+按钮换行，重开不贴屏边 */
+@media (max-width: 767.98px) {
+  .hud .config-select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .hud .config-select_title {
+    display: none;
+  }
+
+  .hud .config-select .select {
+    width: 100%;
+  }
 }
