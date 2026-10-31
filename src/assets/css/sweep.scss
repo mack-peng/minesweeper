@@ -10,7 +10,14 @@
 /* 格子随屏宽连续缩放：可用宽 / 列数，封顶 36px、下限 6px（hell 45 列也放得下） */
 .board {
   --cols: 10;
-  --cell: clamp(6px, calc((100vw - 28px) / var(--cols)), 36px);
+  --cell: clamp(
+    6px,
+    min(
+      calc((100vw - 28px) / var(--cols)),
+      calc((100dvh - 240px) / var(--rows, 20))
+    ),
+    36px
+  );
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
   width: calc(var(--cols) * var(--cell) + 2px);

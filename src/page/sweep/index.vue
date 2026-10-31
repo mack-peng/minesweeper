@@ -84,7 +84,10 @@ export default {
       return count < 0 ? 0 : count;
     },
     boardStyle() {
-      return { "--cols": this.boardSize[0] || 10 };
+      return {
+        "--cols": this.boardSize[0] || 10,
+        "--rows": this.boardSize[1] || 10,
+      };
     },
   },
   methods: {
