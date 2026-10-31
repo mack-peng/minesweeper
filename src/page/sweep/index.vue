@@ -1,87 +1,38 @@
 <template>
-  <div class="snake_bg">
-    <div class="w1440">
-      <div
-        class="paper game-paper"
-        v-first="{
-          name: 'translateRight',
-          duration: '0.5s',
-          delay: '0.5s',
-          offset: '0',
-        }"
-      >
-        <div class="config-select-bar">
-              <ConfigSelect
-                title="难度"
-                :options="difficultyOptions"
-                @apply="sideBarMethod"
-              />
-            </div>
-            <div class="right_top">
-              <div class="row child-borders cont_btn">
-                <span
-                  v-first="{
-                    name: 'translateTop',
-                    duration: '0.5s',
-                    delay: `${0.7 + idx * 0.2}s`,
-                    offset: '0',
-                  }"
-                  class="paper-btn"
-                  v-for="(item, idx) in buttonList"
-                  :key="idx"
-                  :class="buttonClass(item)"
-                  @click="switchEvent(item)"
-                  >{{ item.label }}</span
-                >
-              </div>
-              <div
-                class="mine_tip"
-                v-first="{
-                  name: 'translateTop',
-                  duration: '0.5s',
-                  delay: '0.8s',
-                  offset: '0',
-                }"
-              >
-                <span>{{ `剩余 X ${theRestOfMine}` }}</span>
-                <img
-                  class="mine_img"
-                  src="../../assets/img/sweep/mineTransparent.png"
-                  alt
-                />
-              </div>
-              <div class="user-date">已用时：{{ elapsedTime }}</div>
-            </div>
-            <div
-              class="board cl"
-              :style="boardStyle"
-              v-first="{
-                name: 'translateTop',
-                duration: '0.5s',
-                delay: `${0.7 + buttonList.length * 0.2}s`,
-                offset: '0',
-              }"
-            >
-              <div
-                v-for="(item, idx) in boardData"
-                :key="idx"
-                :style="item.styles"
-                :class="{
-                  [item.type]: true,
-                  isCheck: !item.isCheck,
-                  isTip: item.isTip,
-                  flag: item.isFlag,
-                }"
-                class="sigleCheck"
-                @contextmenu.prevent="insertFlag(item)"
-                @mousedown="clickBoard($event, item)"
-              >
-                {{ item.isCheck ? item.number : "" }}
-              </div>
-            </div>
-          </div>
+  <div class="snake_bg page-shell">
+    <header class="hud">
+      <div class="hud_title">扫雷 Minesweeper</div>
+      <span class="chip">剩余 {{ theRestOfMine }}</span>
+      <span class="chip">{{ elapsedTime }}</span>
+      <div class="hud_spacer"></div>
+      <ConfigSelect title="难度" :options="difficultyOptions" @apply="sideBarMethod" />
+      <button class="btn" :class="{ 'btn--on': flagMode }" @click="toggleFlagMode">
+        🚩 插旗模式
+      </button>
+      <button class="btn btn--accent" @click="onRestart">重新开始</button>
+    </header>
+    <main class="board-panel">
+      <div class="board cl" :style="boardStyle">
+        <div
+          v-for="(item, idx) in boardData"
+          :key="idx"
+          :style="item.styles"
+          :class="{
+            [item.type]: true,
+            isCheck: !item.isCheck,
+            isTip: item.isTip,
+            flag: item.isFlag,
+          }"
+          class="sigleCheck"
+          @contextmenu.prevent="insertFlag(item)"
+          @mousedown="clickBoard($event, item)"
+        >
+          {{ item.isCheck ? item.number : "" }}
         </div>
       </div>
+    </main>
+  </div>
+</template>
 </template>
 
 <script>
@@ -96,7 +47,6 @@ export default {
   data() {
     return {
       defaultMode: "crazy",
-      buttonList: SWEEP.buttonList,
       difficultyOptions: SWEEP.sidebar[0].children,
       boardSize: [0, 0],
       mineCount: 0,
@@ -135,7 +85,7 @@ export default {
       return count < 0 ? 0 : count;
     },
     boardStyle() {
-      return { "--cols": this.boardSize[0] };
+      return { "--cols": this.boardSize[0] || 10 };
     },
   },
   methods: {
@@ -227,27 +177,27 @@ export default {
     },
 
     /**
-     * 按钮事件
+     * 插旗模式开关
      */
-    switchEvent({ type }) {
-      switch (type) {
-        case "restart":
-          this.restartGame();
-          this.HiAlert({
-            type: "success",
-            content: "游戏已重置！",
-          });
-          break;
-        case "flagMode":
-          this.flagMode = !this.flagMode;
-          this.HiAlert({
-            type: this.flagMode ? "primary" : "secondary",
-            content: this.flagMode
-              ? "插旗模式已开启：点击格子进行插旗"
-              : "插旗模式已关闭",
-          });
-          break;
-      }
+    toggleFlagMode() {
+      this.flagMode = !this.flagMode;
+      this.HiAlert({
+        type: this.flagMode ? "success" : "secondary",
+        content: this.flagMode
+          ? "插旗模式已开启：点击格子进行插旗"
+          : "插旗模式已关闭",
+      });
+    },
+
+    /**
+     * 重新开始
+     */
+    onRestart() {
+      this.restartGame();
+      this.HiAlert({
+        type: "success",
+        content: "游戏已重置！",
+      });
     },
 
     /**

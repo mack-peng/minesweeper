@@ -1,126 +1,81 @@
 .snake_bg {
-  background: url('@image/snake/geometry.png');
-  height: 100vh;
-  height: 100dvh;
+  /* 背景由 Rain 组件与 page-shell 压暗层提供 */
 }
 
-.sidebar_h3 {
-  text-align: center;
-  margin: 0 0 15px 0;
-}
-
-.cont_btn .paper-btn {
-  margin: 0 1rem;
+.board-panel {
+  width: min(100%, 860px);
+  display: flex;
 }
 
 .board {
-  border: 1px solid #888;
-  margin: 10px auto;
-  width: min(100%, calc(var(--cols, 40) * 20px + 2px));
+  --cols: 10;
   display: grid;
-  grid-template-columns: repeat(var(--cols, 40), 1fr);
+  grid-template-columns: repeat(var(--cols), 1fr);
+  width: min(100%, calc(var(--cols) * 24px + 2px));
+  margin: auto;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.45);
 }
 
 .sigleCheck {
-  text-align: center;
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(8px, 1.6vw, 12px);
-  border: 1px solid #eee;
+  font-size: clamp(9px, 1.6vw, 13px);
+  font-weight: 700;
+  color: var(--ui-text);
+  border: 1px solid rgba(148, 163, 184, 0.12);
   user-select: none;
+  cursor: pointer;
+  transition: background 0.12s ease;
 }
 
 .sigleCheck:hover {
-  opacity: .8;
+  filter: brightness(1.15);
 }
 
-.null {
-  background: #dedede;
-}
-
-.number {
-  background: #dedede;
-  font-weight: bold;
-}
-
-.mine {
-  background: url('@image/sweep/mine.png') no-repeat center center;
-  background-size: 100% 100%;
-}
-
-.mineNot {
-  background: url('@image/sweep/mineNot.png') no-repeat center center;
-  background-size: 100% 100%;
-}
-
-.mineError {
-  background: url('@image/sweep/mineError.png') no-repeat center center;
-  background-size: 100% 100%;
-}
-
-.mineSuccess {
-  background: url('@image/sweep/mineSuccess.png') no-repeat center center;
-  background-size: 100% 100%;
-}
-
-.isCheck {
-  background: #888;
+/* 未翻开的格子必须盖住类型底图（地雷不可见） */
+.sigleCheck.isCheck {
+  background: #3b4a63;
 }
 
 .isTip {
-  background: rgb(204, 204, 190);
+  background: var(--accent, #2dd4bf);
+  opacity: 0.85;
+}
+
+.null {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.number {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.mine {
+  background: url("@image/sweep/mine.png") no-repeat center center;
+  background-size: 78% 78%;
+}
+
+.mineNot {
+  background: url("@image/sweep/mineNot.png") no-repeat center center;
+  background-size: 78% 78%;
+}
+
+.mineError {
+  background: url("@image/sweep/mineError.png") no-repeat center center;
+  background-size: 78% 78%;
+}
+
+.mineSuccess {
+  background: url("@image/sweep/mineSuccess.png") no-repeat center center;
+  background-size: 78% 78%;
 }
 
 .flag {
-  background: url('@image/sweep/flag.png') no-repeat center center;
-  background-size: 100% 100%;
-}
-
-.mine_img {
-  display: inline-block;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  vertical-align: middle;
-}
-
-.right_top {
-  padding-left: 110px;
-}
-
-.mine_tip {
-  padding-left: 30px;
-  display: inline-block;
-}
-
-.user-date{
-  display: inline-block;
-  padding-left: 30px;
-}
-
-@media (max-width: 767.98px) {
-  .snake_bg {
-    height: auto;
-    overflow: visible;
-  }
-
-  .right_top {
-    padding-left: 0;
-    text-align: center;
-  }
-
-  .mine_tip {
-    padding-left: 0;
-    margin: 0 10px;
-  }
-
-  .user-date {
-    padding-left: 10px;
-  }
-
-  .cont_btn .paper-btn {
-    margin: 0 0.4rem;
-  }
+  background: url("@image/sweep/flag.png") no-repeat center center;
+  background-size: 70% 70%;
 }
