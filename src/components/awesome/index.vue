@@ -121,10 +121,11 @@ export default {
 .awe_img {
   display: block;
   width: 100%;
-  height: 220px;
-  object-fit: cover;
+  height: auto;
+  aspect-ratio: 372 / 220;
+  object-fit: contain;
   border-radius: 16px;
-  background: rgba(148, 163, 184, 0.1);
+  background: #fff;
 }
 
 .result-badge {
@@ -228,10 +229,6 @@ export default {
   .result-card {
     padding: 20px;
     border-radius: 20px;
-  }
-
-  .awe_img {
-    height: 190px;
   }
 
   .result-title {
