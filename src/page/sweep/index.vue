@@ -348,32 +348,19 @@ export default {
       const {
         mineCount,
         boardData,
-        boardSize: [a, b],
+        boardSize: [cols, rows],
       } = this;
-      let i = 0;
-      const randomArr = [];
-      while (i < mineCount) {
-        const ran = parseInt(Math.random() * a * b);
-        let l = randomArr.length;
-        let bool = false;
-        if (l) {
-          for (let n = 0; n < l; n++) {
-            if (ran == randomArr[n]) {
-              bool = true;
-              break;
-            }
-          }
-        }
-        if (!bool) {
-          randomArr.push(ran);
-          i++;
-        }
+      const total = cols * rows;
+      // Partial Fisher-Yates: O(N + M) while guaranteeing unique cells.
+      const indices = Array.from({ length: total }, (_, index) => index);
+      const minePos = [];
+      for (let i = 0; i < mineCount; i++) {
+        const j = i + Math.floor(Math.random() * (total - i));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+        const item = boardData[indices[i]];
+        item.type = "mine";
+        minePos.push(item.pos);
       }
-      let minePos = [];
-      randomArr.map((item) => {
-        boardData[item].type = "mine";
-        minePos.push(boardData[item].pos);
-      });
       this.minePos = minePos;
       this.calcMineForNumber();
     },
@@ -382,26 +369,32 @@ export default {
      * 计算格子周围有多少雷
      */
     calcMineForNumber() {
-      const { boardData, minePos } = this;
-      boardData.map((item) => {
-        let count = 0;
-        const sudoku = this.requestPos(item.pos);
-        sudoku.map((sudo) => {
-          minePos.map((mine) => {
-            if (sudo[0] == mine[0] && sudo[1] == mine[1]) {
-              count++;
-            }
-          });
-        });
-        if (item.type == "init") {
-          if (count == 0) {
-            item.type = "null";
-          } else {
-            item.type = "number";
-            item.number = count;
-            item.styles = this.handleInsertColors(count);
+      const { boardData } = this;
+      const [cols, rows] = this.boardSize;
+      // One-pass neighbor counting: O(N + 8M) instead of O(N * M).
+      const counts = new Uint16Array(boardData.length);
+
+      boardData.forEach((item) => {
+        if (item.type !== "mine") return;
+        const [x, y] = item.pos;
+        for (let dy = -1; dy <= 1; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= rows) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            if (nx < 0 || nx >= cols) continue;
+            counts[ny * cols + nx] += 1;
           }
         }
+      });
+
+      boardData.forEach((item, idx) => {
+        if (item.type === "mine") return;
+        const count = counts[idx];
+        item.type = count === 0 ? "null" : "number";
+        item.number = count === 0 ? undefined : count;
+        item.styles = count === 0 ? {} : this.handleInsertColors(count);
       });
     },
 
