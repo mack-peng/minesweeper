@@ -43,6 +43,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--gap-hud);
+  min-height: 72px;
   padding: var(--space-hud-y) var(--space-hud-x);
   background: var(--ui-panel);
   backdrop-filter: blur(12px);
@@ -51,11 +52,44 @@
   color: var(--ui-text);
 }
 
+.hud_brand {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 12px);
+  margin-right: clamp(0px, 0.4vw, 6px);
+}
+
+.hud_stats,
+.hud_controls {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-hud);
+}
+
+.hud_dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--accent, #2dd4bf);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.6);
+}
+
 .hud_title {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
   font-family: "Patrick Hand SC", cursive;
   font-size: var(--font-title);
   letter-spacing: 1px;
-  margin-right: clamp(0px, 0.4vw, 6px);
+}
+
+.hud_title small {
+  margin-top: 4px;
+  font-family: "Patrick Hand SC", cursive;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--ui-dim);
 }
 
 .hud_spacer {
@@ -63,6 +97,9 @@
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: clamp(4px, 0.55vw, 6px) clamp(9px, 1.3vw, 14px);
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.14);
@@ -72,7 +109,19 @@
   white-space: nowrap;
 }
 
+.chip_icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.chip--danger {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.12);
+}
+
 .btn {
+  margin: 0;
   padding: clamp(6px, 0.85vw, 9px) clamp(11px, 1.7vw, 18px);
   border-radius: clamp(9px, 1vw, 12px);
   border: 1px solid var(--ui-line);
@@ -86,6 +135,12 @@
 
 .btn:hover {
   background: rgba(148, 163, 184, 0.24);
+}
+
+.btn--accent:hover,
+.btn--on:hover {
+  background: var(--accent, #38bdf8);
+  filter: brightness(1.06);
 }
 
 .btn:active {
@@ -135,9 +190,100 @@
   opacity: 0;
 }
 
-/* 手机：标题隐藏（布局语义，非尺寸） */
-@media (max-width: 767.98px) {
-  .hud_title {
+.label-short {
+  display: none;
+}
+
+/* 超窄屏：短标签 + 给难度下拉更多宽度 */
+@media (max-width: 360px) {
+  .hud .config-select {
+    flex: 1.35 1 0;
+  }
+
+  .hud .btn {
+    flex: 0.82 1 0;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .hud .config-select .select {
+    font-size: 10px;
+  }
+
+  .label-full {
     display: none;
+  }
+
+  .label-short {
+    display: inline;
+  }
+}
+
+/* 矮屏 / 横屏：单行紧凑 HUD */
+@media (max-height: 520px) {
+  .hud {
+    min-height: 56px;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 6px 12px;
+  }
+
+  .hud_brand,
+  .hud_spacer,
+  .config-select_title {
+    display: none;
+  }
+
+  .hud_stats {
+    flex: 0 0 auto;
+  }
+
+  .hud_controls {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .hud .config-select,
+  .hud .btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .hud .config-select .select {
+    height: 32px;
+    font-size: 11px;
+  }
+
+  .hud .btn {
+    min-height: 32px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .chip {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+/* 手机：品牌独占一行，控件按行折行 */
+@media (max-width: 767.98px) and (min-height: 521px) {
+  .hud {
+    min-height: 132px;
+  }
+
+  .hud_brand,
+  .hud_stats,
+  .hud_controls {
+    width: 100%;
+  }
+
+  .hud_title {
+    font-size: 20px;
+  }
+
+  .hud_title small {
+    font-size: 9px;
+    letter-spacing: 1.5px;
   }
 }

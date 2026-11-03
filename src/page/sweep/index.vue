@@ -1,38 +1,58 @@
 <template>
   <div class="snake_bg page-shell">
     <header class="hud">
-      <div class="hud_title">扫雷 Minesweeper</div>
-      <span class="chip">剩余 {{ theRestOfMine }}</span>
-      <span class="chip">{{ elapsedTime }}</span>
+      <div class="hud_brand">
+        <span class="hud_dot"></span>
+        <div class="hud_title">
+          <span>扫雷</span>
+          <small>MINESWEEPER</small>
+        </div>
+      </div>
+      <div class="hud_stats">
+        <span class="chip" :class="{ 'chip--danger': theRestOfMine < 0 }">
+          <span class="chip_icon">💣</span>剩余 {{ theRestOfMine }}
+        </span>
+        <span class="chip">
+          <span class="chip_icon">⏱</span>{{ elapsedTime }}
+        </span>
+      </div>
       <div class="hud_spacer"></div>
-      <ConfigSelect
-        title="难度"
-        :options="difficultyOptions"
-        :current="defaultMode"
-        @apply="sideBarMethod"
-      />
-      <button class="btn" :class="{ 'btn--on': flagMode }" @click="toggleFlagMode">
-        🚩 插旗模式
-      </button>
-      <button class="btn btn--accent" @click="onRestart">重新开始</button>
+      <div class="hud_controls">
+        <ConfigSelect
+          title="难度"
+          :options="difficultyOptions"
+          :current="defaultMode"
+          @apply="sideBarMethod"
+        />
+        <button class="btn" :class="{ 'btn--on': flagMode }" @click="toggleFlagMode">
+          <span class="label-full">🚩 插旗模式</span>
+          <span class="label-short">🚩 插旗</span>
+        </button>
+        <button class="btn btn--accent" @click="onRestart">
+          <span class="label-full">重新开始</span>
+          <span class="label-short">重开</span>
+        </button>
+      </div>
     </header>
     <main class="board-panel">
-      <div class="board cl" :style="boardStyle">
-        <div
-          v-for="(item, idx) in boardData"
-          :key="idx"
-          :style="item.styles"
-          :class="{
-            [item.type]: true,
-            isCheck: !item.isCheck,
-            isTip: item.isTip,
-            flag: item.isFlag,
-          }"
-          class="sigleCheck"
-          @contextmenu.prevent="insertFlag(item)"
-          @mousedown="clickBoard($event, item)"
-        >
-          {{ item.isCheck ? item.number : "" }}
+      <div class="board-tray">
+        <div class="board cl" :style="boardStyle">
+          <div
+            v-for="(item, idx) in boardData"
+            :key="idx"
+            :style="item.styles"
+            :class="{
+              [item.type]: true,
+              isCheck: !item.isCheck,
+              isTip: item.isTip,
+              flag: item.isFlag,
+            }"
+            class="sigleCheck"
+            @contextmenu.prevent="insertFlag(item)"
+            @mousedown="clickBoard($event, item)"
+          >
+            {{ item.isCheck ? item.number : "" }}
+          </div>
         </div>
       </div>
     </main>
@@ -58,7 +78,11 @@ export default {
       minePos: [],
       boardData: [],
       gameIsOver: false,
-      elapsedTime: 0,
+      gameWon: false,
+      gameStarted: false,
+      hasRevealed: false,
+      timerStarted: false,
+      elapsedTime: "00:00:00",
       elapsedTimer: null,
       flagMode: false,
     };
@@ -72,12 +96,12 @@ export default {
   },
   mounted() {
     this.bindKeyboard();
+    this.$root.$on("minesweeper:restart", this.onRestart);
     this.offDevice = onDeviceClassChange(() => {
-      if (!this.difficultyByDevice) return;
+      if (!this.difficultyByDevice || this.gameStarted) return;
       const mode = this.deviceMode();
       if (mode === this.defaultMode) return;
       this.defaultMode = mode;
-      this.gameIsOver = false;
       this.setInitMode();
       this.initBoard();
       const labels = { normal: "普通", hard: "困难", crazy: "疯狂" };
@@ -88,10 +112,11 @@ export default {
       });
     });
   },
-  unmounted() {
-    clearInterval(this.elapsedTimer);
+  beforeDestroy() {
+    this.stopTimer();
     document.onkeydown = null;
     document.onmouseup = null;
+    this.$root.$off("minesweeper:restart", this.onRestart);
     if (this.offDevice) {
       this.offDevice();
       this.offDevice = null;
@@ -99,14 +124,10 @@ export default {
   },
   computed: {
     theRestOfMine() {
+      if (this.gameWon) return 0;
       const { boardData, mineCount } = this;
-      const count = boardData.reduce((c, i) => {
-        if (i.isFlag) {
-          return c - 1;
-        }
-        return c;
-      }, mineCount);
-      return count < 0 ? 0 : count;
+      const flags = boardData.reduce((c, i) => (i.isFlag ? c + 1 : c), 0);
+      return mineCount - flags;
     },
     boardStyle() {
       return {
@@ -171,12 +192,16 @@ export default {
      * 游戏胜利
      */
     gameWin() {
-      const { boardData } = this;
-      boardData.map((item) => {
+      if (this.gameIsOver) return;
+      this.gameIsOver = true;
+      this.gameWon = true;
+      this.stopTimer();
+      const opened = this.boardData.filter((item) => item.type !== "mine").length;
+      this.boardData.forEach((item) => {
         item.isCheck = true;
         item.isTip = false;
         item.isFlag = false;
-        if (item.type == "mine") {
+        if (item.type === "mine") {
           item.type = "mineSuccess";
         }
       });
@@ -184,7 +209,32 @@ export default {
         type: "success",
         content: "你赢了！！！",
       });
-      this.HiImg({ type: "win" });
+      this.HiImg({
+        type: "win",
+        time: this.elapsedTime,
+        opened,
+        mines: this.mineCount,
+        difficulty: this.difficultyLabel(),
+      });
+    },
+
+    /**
+     * 当前难度的中文标签（去掉英文括号）
+     */
+    difficultyLabel() {
+      const item = this.difficultyOptions.find((o) => o.mode === this.defaultMode);
+      return item ? item.label.replace(/\s*\(.*\)$/, "") : "";
+    },
+
+    /**
+     * 检查是否已翻开全部安全格
+     */
+    checkWin() {
+      if (this.gameIsOver) return;
+      const safeCells = this.boardData.filter((item) => item.type !== "mine");
+      if (safeCells.length && safeCells.every((item) => item.isCheck)) {
+        this.gameWin();
+      }
     },
 
     /**
@@ -207,8 +257,13 @@ export default {
         }
       }
       this.boardData = afterArr;
+      this.gameIsOver = false;
+      this.gameWon = false;
+      this.gameStarted = false;
+      this.hasRevealed = false;
+      this.flagMode = false;
+      this.resetTimer();
       this.creatMine();
-      this.initElapsedTime();
     },
 
     /**
@@ -228,6 +283,7 @@ export default {
      * 重新开始
      */
     onRestart() {
+      this.HiImg({ isShow: "hide" });
       this.restartGame();
       this.HiAlert({
         type: "success",
@@ -244,26 +300,38 @@ export default {
     },
 
     /**
-     * 初始化游戏时间
+     * 重置并暂停计时
      */
-    initElapsedTime() {
+    resetTimer() {
+      this.stopTimer();
+      this.timerStarted = false;
+      this.elapsedTime = "00:00:00";
+    },
+
+    /**
+     * 首次操作后开始计时
+     */
+    startTimer() {
+      if (this.timerStarted || this.gameIsOver) return;
+      this.timerStarted = true;
       const startTime = moment();
       clearInterval(this.elapsedTimer);
-      this.elapsedTime = "00:00:00";
       this.elapsedTimer = setInterval(() => {
-        const currentTime = moment();
-        const du = moment.duration(currentTime - startTime, "ms");
-        const hours = du.get("hours");
-        const mins = du.get("minutes");
-        const ss = du.get("seconds");
-        const formatDate =
-          this.PrefixInteger(hours, 2) +
-          ":" +
-          this.PrefixInteger(mins, 2) +
-          ":" +
-          this.PrefixInteger(ss, 2);
-        this.elapsedTime = formatDate;
+        const du = moment.duration(moment() - startTime, "ms");
+        this.elapsedTime = [
+          this.PrefixInteger(du.get("hours"), 2),
+          this.PrefixInteger(du.get("minutes"), 2),
+          this.PrefixInteger(du.get("seconds"), 2),
+        ].join(":");
       }, 1000);
+    },
+
+    /**
+     * 停止计时
+     */
+    stopTimer() {
+      clearInterval(this.elapsedTimer);
+      this.elapsedTimer = null;
     },
 
     /**
@@ -341,21 +409,58 @@ export default {
      * 右键/插旗模式 插旗子
      */
     insertFlag(item) {
-      const { boardData, mineCount } = this;
+      if (this.gameIsOver) return;
       if (item.isCheck) {
         item.isFlag = false;
         return;
       }
+      this.gameStarted = true;
+      this.startTimer();
       item.isFlag = !item.isFlag;
-      const correctFlag = boardData.reduce((c, i) => {
-        if (i.isFlag && i.type === "mine") {
-          return c + 1;
+    },
+
+    /**
+     * 首击保护：保证以首击格为中心的 3×3 范围无雷
+     */
+    ensureSafeOpening([x, y]) {
+      const zone = [[x, y], ...this.requestPos([x, y])];
+      const zoneSet = new Set(zone.map((pos) => this.calcIdx(pos)));
+      const minesInZone = [];
+      const candidates = [];
+      this.boardData.forEach((item, idx) => {
+        if (zoneSet.has(idx)) {
+          if (item.type === "mine") minesInZone.push(idx);
+        } else if (item.type !== "mine") {
+          candidates.push(idx);
         }
-        return c;
-      }, 0);
-      if (correctFlag === mineCount) {
-        this.gameWin();
+      });
+      if (!minesInZone.length) return;
+      if (candidates.length < minesInZone.length) return;
+
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
       }
+      minesInZone.forEach((mineIdx, i) => {
+        const wasFlagged = this.boardData[mineIdx].isFlag;
+        this.boardData[mineIdx].type = "init";
+        this.boardData[mineIdx].isFlag = false;
+        this.boardData[candidates[i]].type = "mine";
+        if (wasFlagged) {
+          this.boardData[candidates[i]].isFlag = true;
+        }
+      });
+      this.boardData.forEach((item) => {
+        if (item.type === "mine") return;
+        item.type = "init";
+        item.number = undefined;
+        item.styles = {};
+        item.isRepeat = "not";
+      });
+      this.minePos = this.boardData
+        .filter((item) => item.type === "mine")
+        .map((item) => item.pos);
+      this.calcMineForNumber();
     },
 
     /**
@@ -370,15 +475,20 @@ export default {
      * 点击棋盘扫雷
      */
     clickBoard(e, item) {
-      const { gameIsOver, flagMode } = this;
-      if (gameIsOver) return;
-      // 插旗模式下点击即切换旗子（含取消旗子）
-      if (flagMode) {
+      if (this.gameIsOver) return;
+      if (e.button !== 0) return;
+      // 插旗模式下左键点击即切换旗子（含取消旗子）
+      if (this.flagMode) {
         this.insertFlag(item);
         return;
       }
       if (item.isFlag) return;
-      if (e.button != 0) return;
+      this.gameStarted = true;
+      if (!this.hasRevealed) {
+        this.ensureSafeOpening(item.pos);
+        this.hasRevealed = true;
+      }
+      this.startTimer();
       item.isCheck = true;
       switch (item.type) {
         case "null":
@@ -391,6 +501,7 @@ export default {
           this.pickMine(item);
           break;
       }
+      this.checkWin();
     },
 
     /**
@@ -458,7 +569,11 @@ export default {
      */
     gameOver({ notArr = [], errorArr = [] }) {
       this.gameIsOver = true;
+      this.stopTimer();
       const { boardData } = this;
+      const opened = boardData.filter(
+        (item) => item.isCheck && item.type !== "mine"
+      ).length;
       boardData.map((item) => {
         item.isCheck = true;
         item.isTip = false;
@@ -476,9 +591,13 @@ export default {
         type: "danger",
         content: "游戏失败",
       });
-      this.HiImg({ type: "fail" });
-      clearInterval(this.elapsedTimer);
-      this.elapsedTimer = null;
+      this.HiImg({
+        type: "fail",
+        time: this.elapsedTime,
+        opened,
+        mines: 1,
+        difficulty: this.difficultyLabel(),
+      });
     },
 
     /**

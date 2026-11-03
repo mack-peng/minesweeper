@@ -18,25 +18,24 @@ const store = new Vuex.Store({
      */
     handleAlert(state, data) {
       state.alertId += 1;
+      const alertId = state.alertId;
       if (data.clear) {
         clearTimeout(state.alertClearTimer);
-        state.alertQueue = [];
-        state.alertQueue.push({
-          ...data,
-          alertId: state.alertId,
-        });
+        state.alertQueue = [{ ...data, alertId }];
         state.alertClearTimer = setTimeout(() => {
-          state.alertQueue.shift(1);
+          state.alertQueue = [];
         }, 2000);
-      } else {
-        state.alertQueue.push({
-          ...data,
-          alertId: state.alertId,
-        });
-        setTimeout(() => {
-          state.alertQueue.shift(1);
-        }, 2000);
+        return;
       }
+      state.alertQueue.push({ ...data, alertId });
+      if (state.alertQueue.length > 3) {
+        state.alertQueue.splice(0, state.alertQueue.length - 3);
+      }
+      setTimeout(() => {
+        state.alertQueue = state.alertQueue.filter(
+          (item) => item.alertId !== alertId
+        );
+      }, 2000);
     },
 
     /**
