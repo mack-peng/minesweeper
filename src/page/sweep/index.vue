@@ -48,7 +48,7 @@
               flag: item.isFlag,
             }"
             class="sigleCheck"
-            @contextmenu.prevent="insertFlag(item)"
+            @contextmenu.prevent="onContextMenu(item)"
             @mousedown="clickBoard($event, item)"
           >
             {{ item.isCheck ? item.number : "" }}
@@ -82,6 +82,7 @@ export default {
       gameStarted: false,
       flagCount: 0,
       safeRemaining: 0,
+      lastCtrlFlag: null,
       hasRevealed: false,
       timerStarted: false,
       elapsedTime: "00:00:00",
@@ -420,6 +421,18 @@ export default {
     },
 
     /**
+     * 右键 / Mac Ctrl+click 共用入口，避免 Ctrl+click 后再触发 contextmenu 双切换
+     */
+    onContextMenu(item) {
+      const last = this.lastCtrlFlag;
+      if (last && last.item === item && Date.now() - last.time < 500) {
+        this.lastCtrlFlag = null;
+        return;
+      }
+      this.insertFlag(item);
+    },
+
+    /**
      * 首击保护：保证以首击格为中心的 3×3 范围无雷
      */
     ensureSafeOpening([x, y]) {
@@ -486,6 +499,12 @@ export default {
     clickBoard(e, item) {
       if (this.gameIsOver) return;
       if (e.button !== 0) return;
+      // macOS 触控板 Ctrl+click 等价于右键；先插旗，contextmenu 由 onContextMenu 去重
+      if (e.ctrlKey) {
+        this.insertFlag(item);
+        this.lastCtrlFlag = { item, time: Date.now() };
+        return;
+      }
       // 插旗模式下左键点击即切换旗子（含取消旗子）
       if (this.flagMode) {
         this.insertFlag(item);
