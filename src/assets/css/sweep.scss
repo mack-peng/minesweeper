@@ -130,6 +130,17 @@
   background-size: 70% 70%;
 }
 
+/* 覆盖未翻开格的底色规则：旗子/提示需要更高优先级 */
+.sigleCheck.isCheck.isTip {
+  background: var(--accent, #2dd4bf);
+  opacity: 0.85;
+}
+
+.sigleCheck.isCheck.flag {
+  background: url("@image/sweep/flag.png") no-repeat center center;
+  background-size: 70% 70%;
+}
+
 /* 移动端 HUD：chips+下拉一行，两按钮等宽占满下一行 */
 @media (max-width: 767.98px) {
   .hud_spacer {

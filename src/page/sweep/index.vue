@@ -553,7 +553,7 @@ export default {
       for (let i = 0; i < neighbors.length; i++) {
         const item = boardData[neighbors[i]];
         if (!item) continue;
-        if (!item.isCheck) {
+        if (!item.isCheck && !item.isFlag) {
           item.isTip = true;
         }
         if (item.type == "mine") {
