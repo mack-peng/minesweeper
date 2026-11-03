@@ -75,7 +75,6 @@ export default {
       difficultyOptions: SWEEP.sidebar[0].children,
       boardSize: [0, 0],
       mineCount: 0,
-      minePos: [],
       boardData: [],
       gameIsOver: false,
       gameWon: false,
@@ -357,15 +356,11 @@ export default {
       const total = cols * rows;
       // Partial Fisher-Yates: O(N + M) while guaranteeing unique cells.
       const indices = Array.from({ length: total }, (_, index) => index);
-      const minePos = [];
       for (let i = 0; i < mineCount; i++) {
         const j = i + Math.floor(Math.random() * (total - i));
         [indices[i], indices[j]] = [indices[j], indices[i]];
-        const item = boardData[indices[i]];
-        item.type = "mine";
-        minePos.push(item.pos);
+        boardData[indices[i]].type = "mine";
       }
-      this.minePos = minePos;
       this.calcMineForNumber();
     },
 
@@ -479,9 +474,6 @@ export default {
         item.styles = {};
         item.isRepeat = "not";
       });
-      this.minePos = this.boardData
-        .filter((item) => item.type === "mine")
-        .map((item) => item.pos);
       this.calcMineForNumber();
     },
 
