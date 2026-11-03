@@ -80,6 +80,8 @@ export default {
       gameIsOver: false,
       gameWon: false,
       gameStarted: false,
+      flagCount: 0,
+      safeRemaining: 0,
       hasRevealed: false,
       timerStarted: false,
       elapsedTime: "00:00:00",
@@ -125,9 +127,7 @@ export default {
   computed: {
     theRestOfMine() {
       if (this.gameWon) return 0;
-      const { boardData, mineCount } = this;
-      const flags = boardData.reduce((c, i) => (i.isFlag ? c + 1 : c), 0);
-      return mineCount - flags;
+      return this.mineCount - this.flagCount;
     },
     boardStyle() {
       return {
@@ -205,6 +205,8 @@ export default {
           item.type = "mineSuccess";
         }
       });
+      this.flagCount = 0;
+      this.safeRemaining = 0;
       this.HiAlert({
         type: "success",
         content: "你赢了！！！",
@@ -231,8 +233,7 @@ export default {
      */
     checkWin() {
       if (this.gameIsOver) return;
-      const safeCells = this.boardData.filter((item) => item.type !== "mine");
-      if (safeCells.length && safeCells.every((item) => item.isCheck)) {
+      if (this.safeRemaining === 0) {
         this.gameWin();
       }
     },
@@ -262,6 +263,8 @@ export default {
       this.gameStarted = false;
       this.hasRevealed = false;
       this.flagMode = false;
+      this.flagCount = 0;
+      this.safeRemaining = x * y - this.mineCount;
       this.resetTimer();
       this.creatMine();
     },
@@ -404,20 +407,26 @@ export default {
     insertFlag(item) {
       if (this.gameIsOver) return;
       if (item.isCheck) {
-        item.isFlag = false;
+        if (item.isFlag) {
+          item.isFlag = false;
+          this.flagCount -= 1;
+        }
         return;
       }
       this.gameStarted = true;
       this.startTimer();
       item.isFlag = !item.isFlag;
+      this.flagCount += item.isFlag ? 1 : -1;
     },
 
     /**
      * 首击保护：保证以首击格为中心的 3×3 范围无雷
      */
     ensureSafeOpening([x, y]) {
-      const zone = [[x, y], ...this.requestPos([x, y])];
-      const zoneSet = new Set(zone.map((pos) => this.calcIdx(pos)));
+      const zoneSet = new Set([
+        this.calcIdx([x, y]),
+        ...this.neighborIndices([x, y]),
+      ]);
       const minesInZone = [];
       const candidates = [];
       this.boardData.forEach((item, idx) => {
@@ -443,7 +452,11 @@ export default {
         target.number = undefined;
         target.styles = {};
         if (wasFlagged) {
-          target.isFlag = true;
+          if (target.isFlag) {
+            this.flagCount -= 1;
+          } else {
+            target.isFlag = true;
+          }
         }
       });
       this.boardData.forEach((item) => {
@@ -485,6 +498,9 @@ export default {
         this.hasRevealed = true;
       }
       this.startTimer();
+      if (!item.isCheck && item.type !== "mine") {
+        this.safeRemaining -= 1;
+      }
       item.isCheck = true;
       switch (item.type) {
         case "null":
@@ -514,11 +530,12 @@ export default {
      */
     pickNumber(item) {
       const { boardData } = this;
+      const tipIndices = this.neighborIndices(item.pos);
       this.tipUserSudoForPos(item);
       document.onmouseup = () => {
-        for (let i = 0; i < boardData.length; i++) {
-          const theOne = boardData[i];
-          theOne.isTip = false;
+        for (let i = 0; i < tipIndices.length; i++) {
+          const cell = boardData[tipIndices[i]];
+          if (cell) cell.isTip = false;
         }
         document.onmouseup = null;
       };
@@ -532,11 +549,11 @@ export default {
       let flagCount = 0;
       const mineArr = [];
       const flagArr = [];
-      const sudoku = this.requestPos(pos);
-      for (let i = 0; i < sudoku.length; i++) {
-        const idx = this.calcIdx(sudoku[i]);
-        const item = boardData[idx];
-        if (item && !item.isCheck) {
+      const neighbors = this.neighborIndices(pos);
+      for (let i = 0; i < neighbors.length; i++) {
+        const item = boardData[neighbors[i]];
+        if (!item) continue;
+        if (!item.isCheck) {
           item.isTip = true;
         }
         if (item.type == "mine") {
@@ -575,6 +592,8 @@ export default {
         item.isTip = false;
         item.isFlag = false;
       });
+      this.flagCount = 0;
+      this.safeRemaining = 0;
       for (let i = 0; i < notArr.length; i++) {
         const idx = this.calcIdx(notArr[i]);
         boardData[idx].type = "mineSuccess";
@@ -632,53 +651,57 @@ export default {
     },
 
     /**
-     * 点击空白处递归方法
+     * 点击空白处展开（显式栈，避免递归深度）
      */
     handleSpace(arr) {
       const { boardData } = this;
-      const sudoku = this.requestPos(arr);
-      for (let i = 0; i < sudoku.length; i++) {
-        const idx = this.calcIdx(sudoku[i]);
-        const item = boardData[idx];
-        if (item == undefined) {
-          continue;
-        }
-        if (item.isRepeat === "not") {
+      const startItem = boardData[this.calcIdx(arr)];
+      if (startItem && startItem.isRepeat === "not") {
+        startItem.isRepeat = "is";
+      }
+      const stack = [arr];
+      while (stack.length) {
+        const pos = stack.pop();
+        const neighbors = this.neighborIndices(pos);
+        for (let i = 0; i < neighbors.length; i++) {
+          const item = boardData[neighbors[i]];
+          if (!item || item.isRepeat !== "not") continue;
           item.isRepeat = "is";
           if (item.type !== "mine") {
+            if (!item.isCheck) {
+              this.safeRemaining -= 1;
+            }
             item.isCheck = true;
-            item.isFlag = false;
+            if (item.isFlag) {
+              item.isFlag = false;
+              this.flagCount -= 1;
+            }
           }
-          if (item.type === "number") {
-            continue;
-          }
+          if (item.type === "number") continue;
           if (item.type === "null") {
-            this.handleSpace(item.pos);
+            stack.push(item.pos);
           }
         }
       }
     },
 
     /**
-     * 传入坐标返回九宫格的二维数组
+     * 传入坐标返回九宫格索引（越界裁剪）
      */
-    requestPos([x, y]) {
-      const [maxX, maxY] = this.boardSize;
-      const arr = [
-        [x - 1, y - 1],
-        [x, y - 1],
-        [x + 1, y - 1],
-        [x - 1, y],
-        [x + 1, y],
-        [x - 1, y + 1],
-        [x, y + 1],
-        [x + 1, y + 1],
-      ];
-      const filterArr = arr.filter(
-        ([posX, posY]) =>
-          !(posX < 0 || posY < 0 || posX >= maxX || posY >= maxY)
-      );
-      return filterArr;
+    neighborIndices([x, y]) {
+      const [cols, rows] = this.boardSize;
+      const indices = [];
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= rows) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          if (nx < 0 || nx >= cols) continue;
+          indices.push(ny * cols + nx);
+        }
+      }
+      return indices;
     },
 
     /**
