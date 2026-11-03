@@ -4,9 +4,20 @@
 
 .board-panel {
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   justify-content: center;
+  align-items: center;
   padding: 0 14px;
+}
+
+/* 手机竖屏：顶部留 48px，与设计稿一致；横屏继续垂直居中 */
+@media (max-width: 767.98px) and (min-height: 521px) {
+  .board-panel {
+    align-items: flex-start;
+    padding-top: 48px;
+  }
 }
 
 .board-tray {
