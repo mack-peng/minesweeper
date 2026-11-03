@@ -443,11 +443,14 @@ export default {
       }
       minesInZone.forEach((mineIdx, i) => {
         const wasFlagged = this.boardData[mineIdx].isFlag;
+        const target = this.boardData[candidates[i]];
         this.boardData[mineIdx].type = "init";
         this.boardData[mineIdx].isFlag = false;
-        this.boardData[candidates[i]].type = "mine";
+        target.type = "mine";
+        target.number = undefined;
+        target.styles = {};
         if (wasFlagged) {
-          this.boardData[candidates[i]].isFlag = true;
+          target.isFlag = true;
         }
       });
       this.boardData.forEach((item) => {
@@ -510,7 +513,7 @@ export default {
     pickMine({ pos, isFlag }) {
       if (isFlag) return;
       const errorArr = [pos];
-      this.gameOver({ errorArr });
+      this.gameOver({ errorArr, reason: "mine" });
     },
 
     /**
@@ -559,7 +562,7 @@ export default {
         if (bool) {
           this.handleSpace(pos);
         } else {
-          this.gameOver({ notArr, errorArr });
+          this.gameOver({ notArr, errorArr, reason: "chord" });
         }
       }
     },
@@ -567,7 +570,7 @@ export default {
     /**
      * 游戏结束
      */
-    gameOver({ notArr = [], errorArr = [] }) {
+    gameOver({ notArr = [], errorArr = [], reason = "mine" }) {
       this.gameIsOver = true;
       this.stopTimer();
       const { boardData } = this;
@@ -593,6 +596,7 @@ export default {
       });
       this.HiImg({
         type: "fail",
+        reason,
         time: this.elapsedTime,
         opened,
         mines: 1,

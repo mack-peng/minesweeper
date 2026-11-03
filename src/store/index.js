@@ -23,7 +23,9 @@ const store = new Vuex.Store({
         clearTimeout(state.alertClearTimer);
         state.alertQueue = [{ ...data, alertId }];
         state.alertClearTimer = setTimeout(() => {
-          state.alertQueue = [];
+          state.alertQueue = state.alertQueue.filter(
+            (item) => item.alertId !== alertId
+          );
         }, 2000);
         return;
       }

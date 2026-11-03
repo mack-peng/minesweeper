@@ -24,7 +24,13 @@
             <strong>{{ cartoon.opened || 0 }}</strong>
           </div>
           <div>
-            <span>{{ cartoon.type === "win" ? "地雷" : "踩雷" }}</span>
+            <span>{{
+              cartoon.type === "win"
+                ? "地雷"
+                : cartoon.reason === "chord"
+                ? "误判"
+                : "踩雷"
+            }}</span>
             <strong>{{ cartoon.type === "win" ? cartoon.mines || 0 : 1 }}</strong>
           </div>
         </div>
@@ -56,9 +62,14 @@ export default {
       return picked ? imgs[picked] : "";
     },
     subtitle() {
-      const { type, difficulty } = this.cartoon;
+      const { type, difficulty, reason } = this.cartoon;
       const mode = difficulty ? `${difficulty}难度` : "";
-      const result = type === "win" ? "全部安全格已翻开" : "踩到地雷";
+      const result =
+        type === "win"
+          ? "全部安全格已翻开"
+          : reason === "chord"
+          ? "九宫格旗数校验失败"
+          : "踩到地雷";
       return [mode, result].filter(Boolean).join(" · ");
     },
     ...mapState(["cartoon"]),
