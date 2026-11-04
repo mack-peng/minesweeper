@@ -4,29 +4,69 @@
 
 .board-panel {
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 14px;
 }
 
-/* 格子随屏宽连续缩放：可用宽 / 列数，封顶 36px、下限 6px（hell 45 列也放得下） */
+/* 手机竖屏：顶部留 48px，与设计稿一致；横屏继续垂直居中 */
+@media (max-width: 767.98px) and (min-height: 521px) {
+  .board-panel {
+    align-items: flex-start;
+    padding-top: 48px;
+  }
+}
+
+.board-tray {
+  box-sizing: border-box;
+  max-width: calc(100vw - 28px);
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(11, 18, 32, 0.55);
+  border: 1px solid var(--ui-line);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.65);
+}
+
+/* 格子随屏宽/屏高连续缩放：封顶 36px、下限 6px（hell 45 列也放得下） */
 .board {
   --cols: 10;
+  --hud-offset: 104px;
   --cell: clamp(
     6px,
     min(
-      calc((100vw - 28px) / var(--cols)),
-      calc((100dvh - 240px) / var(--rows, 20))
+      calc((100vw - 50px) / var(--cols)),
+      calc((100dvh - var(--hud-offset)) / var(--rows, 20))
     ),
     36px
   );
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
-  width: calc(var(--cols) * var(--cell) + 2px);
-  max-width: calc(100vw - 28px);
+  width: calc(var(--cols) * var(--cell));
   margin: auto;
-  border: 1px solid var(--ui-line);
-  border-radius: clamp(8px, 1.2vw, 12px);
+  border-radius: 10px;
   overflow: hidden;
   background: rgba(15, 23, 42, 0.45);
+}
+
+@media (max-width: 1023.98px) {
+  .board {
+    --hud-offset: 110px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .board {
+    --hud-offset: 140px;
+  }
+}
+
+@media (max-height: 520px) {
+  .board {
+    --hud-offset: 120px;
+  }
 }
 
 .sigleCheck {
@@ -90,6 +130,17 @@
   background-size: 70% 70%;
 }
 
+/* 覆盖未翻开格的底色规则：旗子/提示需要更高优先级 */
+.sigleCheck.isCheck.isTip {
+  background: var(--accent, #2dd4bf);
+  opacity: 0.85;
+}
+
+.sigleCheck.isCheck.flag {
+  background: url("@image/sweep/flag.png") no-repeat center center;
+  background-size: 70% 70%;
+}
+
 /* 移动端 HUD：chips+下拉一行，两按钮等宽占满下一行 */
 @media (max-width: 767.98px) {
   .hud_spacer {
@@ -97,7 +148,7 @@
   }
 
   .hud .config-select {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     width: auto;
     min-width: 0;
   }
@@ -108,12 +159,12 @@
 
   .hud .config-select .select {
     width: 100%;
-    height: 34px;
+    height: 36px;
   }
 
   .hud .btn {
-    flex: 1 1 calc(50% - var(--gap-hud) / 2);
+    flex: 1 1 0;
     min-width: 0;
-    min-height: 40px;
+    min-height: 36px;
   }
 }

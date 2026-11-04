@@ -1,38 +1,58 @@
 <template>
   <div class="snake_bg page-shell">
     <header class="hud">
-      <div class="hud_title">扫雷 Minesweeper</div>
-      <span class="chip">剩余 {{ theRestOfMine }}</span>
-      <span class="chip">{{ elapsedTime }}</span>
+      <div class="hud_brand">
+        <span class="hud_dot"></span>
+        <div class="hud_title">
+          <span>扫雷</span>
+          <small>MINESWEEPER</small>
+        </div>
+      </div>
+      <div class="hud_stats">
+        <span class="chip" :class="{ 'chip--danger': theRestOfMine < 0 }">
+          <span class="chip_icon">💣</span>剩余 {{ theRestOfMine }}
+        </span>
+        <span class="chip">
+          <span class="chip_icon">⏱</span>{{ elapsedTime }}
+        </span>
+      </div>
       <div class="hud_spacer"></div>
-      <ConfigSelect
-        title="难度"
-        :options="difficultyOptions"
-        :current="defaultMode"
-        @apply="sideBarMethod"
-      />
-      <button class="btn" :class="{ 'btn--on': flagMode }" @click="toggleFlagMode">
-        🚩 插旗模式
-      </button>
-      <button class="btn btn--accent" @click="onRestart">重新开始</button>
+      <div class="hud_controls">
+        <ConfigSelect
+          title="难度"
+          :options="difficultyOptions"
+          :current="defaultMode"
+          @apply="sideBarMethod"
+        />
+        <button class="btn" :class="{ 'btn--on': flagMode }" @click="toggleFlagMode">
+          <span class="label-full">🚩 插旗模式</span>
+          <span class="label-short">🚩 插旗</span>
+        </button>
+        <button class="btn btn--accent" @click="onRestart">
+          <span class="label-full">重新开始</span>
+          <span class="label-short">重开</span>
+        </button>
+      </div>
     </header>
     <main class="board-panel">
-      <div class="board cl" :style="boardStyle">
-        <div
-          v-for="(item, idx) in boardData"
-          :key="idx"
-          :style="item.styles"
-          :class="{
-            [item.type]: true,
-            isCheck: !item.isCheck,
-            isTip: item.isTip,
-            flag: item.isFlag,
-          }"
-          class="sigleCheck"
-          @contextmenu.prevent="insertFlag(item)"
-          @mousedown="clickBoard($event, item)"
-        >
-          {{ item.isCheck ? item.number : "" }}
+      <div class="board-tray">
+        <div class="board cl" :style="boardStyle">
+          <div
+            v-for="(item, idx) in boardData"
+            :key="idx"
+            :style="item.styles"
+            :class="{
+              [item.type]: true,
+              isCheck: !item.isCheck,
+              isTip: item.isTip,
+              flag: item.isFlag,
+            }"
+            class="sigleCheck"
+            @contextmenu.prevent="onContextMenu(item)"
+            @mousedown="clickBoard($event, item)"
+          >
+            {{ item.isCheck ? item.number : "" }}
+          </div>
         </div>
       </div>
     </main>
@@ -55,10 +75,16 @@ export default {
       difficultyOptions: SWEEP.sidebar[0].children,
       boardSize: [0, 0],
       mineCount: 0,
-      minePos: [],
       boardData: [],
       gameIsOver: false,
-      elapsedTime: 0,
+      gameWon: false,
+      gameStarted: false,
+      flagCount: 0,
+      safeRemaining: 0,
+      lastCtrlFlag: null,
+      hasRevealed: false,
+      timerStarted: false,
+      elapsedTime: "00:00:00",
       elapsedTimer: null,
       flagMode: false,
     };
@@ -72,12 +98,12 @@ export default {
   },
   mounted() {
     this.bindKeyboard();
+    this.$root.$on("minesweeper:restart", this.onRestart);
     this.offDevice = onDeviceClassChange(() => {
-      if (!this.difficultyByDevice) return;
+      if (!this.difficultyByDevice || this.gameStarted) return;
       const mode = this.deviceMode();
       if (mode === this.defaultMode) return;
       this.defaultMode = mode;
-      this.gameIsOver = false;
       this.setInitMode();
       this.initBoard();
       const labels = { normal: "普通", hard: "困难", crazy: "疯狂" };
@@ -88,10 +114,11 @@ export default {
       });
     });
   },
-  unmounted() {
-    clearInterval(this.elapsedTimer);
+  beforeDestroy() {
+    this.stopTimer();
     document.onkeydown = null;
     document.onmouseup = null;
+    this.$root.$off("minesweeper:restart", this.onRestart);
     if (this.offDevice) {
       this.offDevice();
       this.offDevice = null;
@@ -99,14 +126,8 @@ export default {
   },
   computed: {
     theRestOfMine() {
-      const { boardData, mineCount } = this;
-      const count = boardData.reduce((c, i) => {
-        if (i.isFlag) {
-          return c - 1;
-        }
-        return c;
-      }, mineCount);
-      return count < 0 ? 0 : count;
+      if (this.gameWon) return 0;
+      return this.mineCount - this.flagCount;
     },
     boardStyle() {
       return {
@@ -171,20 +192,50 @@ export default {
      * 游戏胜利
      */
     gameWin() {
-      const { boardData } = this;
-      boardData.map((item) => {
+      if (this.gameIsOver) return;
+      this.gameIsOver = true;
+      this.gameWon = true;
+      this.stopTimer();
+      const opened = this.boardData.filter((item) => item.type !== "mine").length;
+      this.boardData.forEach((item) => {
         item.isCheck = true;
         item.isTip = false;
         item.isFlag = false;
-        if (item.type == "mine") {
+        if (item.type === "mine") {
           item.type = "mineSuccess";
         }
       });
+      this.flagCount = 0;
+      this.safeRemaining = 0;
       this.HiAlert({
         type: "success",
         content: "你赢了！！！",
       });
-      this.HiImg({ type: "win" });
+      this.HiImg({
+        type: "win",
+        time: this.elapsedTime,
+        opened,
+        mines: this.mineCount,
+        difficulty: this.difficultyLabel(),
+      });
+    },
+
+    /**
+     * 当前难度的中文标签（去掉英文括号）
+     */
+    difficultyLabel() {
+      const item = this.difficultyOptions.find((o) => o.mode === this.defaultMode);
+      return item ? item.label.replace(/\s*\(.*\)$/, "") : "";
+    },
+
+    /**
+     * 检查是否已翻开全部安全格
+     */
+    checkWin() {
+      if (this.gameIsOver) return;
+      if (this.safeRemaining === 0) {
+        this.gameWin();
+      }
     },
 
     /**
@@ -207,8 +258,15 @@ export default {
         }
       }
       this.boardData = afterArr;
+      this.gameIsOver = false;
+      this.gameWon = false;
+      this.gameStarted = false;
+      this.hasRevealed = false;
+      this.flagMode = false;
+      this.flagCount = 0;
+      this.safeRemaining = x * y - this.mineCount;
+      this.resetTimer();
       this.creatMine();
-      this.initElapsedTime();
     },
 
     /**
@@ -228,6 +286,7 @@ export default {
      * 重新开始
      */
     onRestart() {
+      this.HiImg({ isShow: "hide" });
       this.restartGame();
       this.HiAlert({
         type: "success",
@@ -244,26 +303,38 @@ export default {
     },
 
     /**
-     * 初始化游戏时间
+     * 重置并暂停计时
      */
-    initElapsedTime() {
+    resetTimer() {
+      this.stopTimer();
+      this.timerStarted = false;
+      this.elapsedTime = "00:00:00";
+    },
+
+    /**
+     * 首次操作后开始计时
+     */
+    startTimer() {
+      if (this.timerStarted || this.gameIsOver) return;
+      this.timerStarted = true;
       const startTime = moment();
       clearInterval(this.elapsedTimer);
-      this.elapsedTime = "00:00:00";
       this.elapsedTimer = setInterval(() => {
-        const currentTime = moment();
-        const du = moment.duration(currentTime - startTime, "ms");
-        const hours = du.get("hours");
-        const mins = du.get("minutes");
-        const ss = du.get("seconds");
-        const formatDate =
-          this.PrefixInteger(hours, 2) +
-          ":" +
-          this.PrefixInteger(mins, 2) +
-          ":" +
-          this.PrefixInteger(ss, 2);
-        this.elapsedTime = formatDate;
+        const du = moment.duration(moment() - startTime, "ms");
+        this.elapsedTime = [
+          this.PrefixInteger(du.get("hours"), 2),
+          this.PrefixInteger(du.get("minutes"), 2),
+          this.PrefixInteger(du.get("seconds"), 2),
+        ].join(":");
       }, 1000);
+    },
+
+    /**
+     * 停止计时
+     */
+    stopTimer() {
+      clearInterval(this.elapsedTimer);
+      this.elapsedTimer = null;
     },
 
     /**
@@ -280,33 +351,16 @@ export default {
       const {
         mineCount,
         boardData,
-        boardSize: [a, b],
+        boardSize: [cols, rows],
       } = this;
-      let i = 0;
-      const randomArr = [];
-      while (i < mineCount) {
-        const ran = parseInt(Math.random() * a * b);
-        let l = randomArr.length;
-        let bool = false;
-        if (l) {
-          for (let n = 0; n < l; n++) {
-            if (ran == randomArr[n]) {
-              bool = true;
-              break;
-            }
-          }
-        }
-        if (!bool) {
-          randomArr.push(ran);
-          i++;
-        }
+      const total = cols * rows;
+      // Partial Fisher-Yates: O(N + M) while guaranteeing unique cells.
+      const indices = Array.from({ length: total }, (_, index) => index);
+      for (let i = 0; i < mineCount; i++) {
+        const j = i + Math.floor(Math.random() * (total - i));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+        boardData[indices[i]].type = "mine";
       }
-      let minePos = [];
-      randomArr.map((item) => {
-        boardData[item].type = "mine";
-        minePos.push(boardData[item].pos);
-      });
-      this.minePos = minePos;
       this.calcMineForNumber();
     },
 
@@ -314,26 +368,32 @@ export default {
      * 计算格子周围有多少雷
      */
     calcMineForNumber() {
-      const { boardData, minePos } = this;
-      boardData.map((item) => {
-        let count = 0;
-        const sudoku = this.requestPos(item.pos);
-        sudoku.map((sudo) => {
-          minePos.map((mine) => {
-            if (sudo[0] == mine[0] && sudo[1] == mine[1]) {
-              count++;
-            }
-          });
-        });
-        if (item.type == "init") {
-          if (count == 0) {
-            item.type = "null";
-          } else {
-            item.type = "number";
-            item.number = count;
-            item.styles = this.handleInsertColors(count);
+      const { boardData } = this;
+      const [cols, rows] = this.boardSize;
+      // One-pass neighbor counting: O(N + 8M) instead of O(N * M).
+      const counts = new Uint16Array(boardData.length);
+
+      boardData.forEach((item) => {
+        if (item.type !== "mine") return;
+        const [x, y] = item.pos;
+        for (let dy = -1; dy <= 1; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= rows) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            if (nx < 0 || nx >= cols) continue;
+            counts[ny * cols + nx] += 1;
           }
         }
+      });
+
+      boardData.forEach((item, idx) => {
+        if (item.type === "mine") return;
+        const count = counts[idx];
+        item.type = count === 0 ? "null" : "number";
+        item.number = count === 0 ? undefined : count;
+        item.styles = count === 0 ? {} : this.handleInsertColors(count);
       });
     },
 
@@ -341,21 +401,80 @@ export default {
      * 右键/插旗模式 插旗子
      */
     insertFlag(item) {
-      const { boardData, mineCount } = this;
+      if (this.gameIsOver) return;
       if (item.isCheck) {
-        item.isFlag = false;
+        if (item.isFlag) {
+          item.isFlag = false;
+          this.flagCount -= 1;
+        }
         return;
       }
+      this.gameStarted = true;
+      this.startTimer();
       item.isFlag = !item.isFlag;
-      const correctFlag = boardData.reduce((c, i) => {
-        if (i.isFlag && i.type === "mine") {
-          return c + 1;
-        }
-        return c;
-      }, 0);
-      if (correctFlag === mineCount) {
-        this.gameWin();
+      this.flagCount += item.isFlag ? 1 : -1;
+    },
+
+    /**
+     * 右键 / Mac Ctrl+click 共用入口，避免 Ctrl+click 后再触发 contextmenu 双切换
+     */
+    onContextMenu(item) {
+      const last = this.lastCtrlFlag;
+      if (last && last.item === item && Date.now() - last.time < 500) {
+        this.lastCtrlFlag = null;
+        return;
       }
+      this.insertFlag(item);
+    },
+
+    /**
+     * 首击保护：保证以首击格为中心的 3×3 范围无雷
+     */
+    ensureSafeOpening([x, y]) {
+      const zoneSet = new Set([
+        this.calcIdx([x, y]),
+        ...this.neighborIndices([x, y]),
+      ]);
+      const minesInZone = [];
+      const candidates = [];
+      this.boardData.forEach((item, idx) => {
+        if (zoneSet.has(idx)) {
+          if (item.type === "mine") minesInZone.push(idx);
+        } else if (item.type !== "mine") {
+          candidates.push(idx);
+        }
+      });
+      if (!minesInZone.length) return;
+      if (candidates.length < minesInZone.length) return;
+
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+      minesInZone.forEach((mineIdx, i) => {
+        const wasFlagged = this.boardData[mineIdx].isFlag;
+        const target = this.boardData[candidates[i]];
+        this.boardData[mineIdx].type = "init";
+        this.boardData[mineIdx].isFlag = false;
+        target.type = "mine";
+        target.number = undefined;
+        target.styles = {};
+        if (wasFlagged) {
+          if (target.isFlag) {
+            this.flagCount -= 1;
+          } else {
+            target.isFlag = true;
+          }
+        }
+      });
+      this.boardData.forEach((item) => {
+        if (item.type === "mine") return;
+        item.type = "init";
+        item.number = undefined;
+        item.styles = {};
+        item.isRepeat = "not";
+      });
+      this.calcMineForNumber();
     },
 
     /**
@@ -370,15 +489,29 @@ export default {
      * 点击棋盘扫雷
      */
     clickBoard(e, item) {
-      const { gameIsOver, flagMode } = this;
-      if (gameIsOver) return;
-      // 插旗模式下点击即切换旗子（含取消旗子）
-      if (flagMode) {
+      if (this.gameIsOver) return;
+      if (e.button !== 0) return;
+      // macOS 触控板 Ctrl+click 等价于右键；先插旗，contextmenu 由 onContextMenu 去重
+      if (e.ctrlKey) {
+        this.insertFlag(item);
+        this.lastCtrlFlag = { item, time: Date.now() };
+        return;
+      }
+      // 插旗模式下左键点击即切换旗子（含取消旗子）
+      if (this.flagMode) {
         this.insertFlag(item);
         return;
       }
       if (item.isFlag) return;
-      if (e.button != 0) return;
+      this.gameStarted = true;
+      if (!this.hasRevealed) {
+        this.ensureSafeOpening(item.pos);
+        this.hasRevealed = true;
+      }
+      this.startTimer();
+      if (!item.isCheck && item.type !== "mine") {
+        this.safeRemaining -= 1;
+      }
       item.isCheck = true;
       switch (item.type) {
         case "null":
@@ -391,6 +524,7 @@ export default {
           this.pickMine(item);
           break;
       }
+      this.checkWin();
     },
 
     /**
@@ -399,7 +533,7 @@ export default {
     pickMine({ pos, isFlag }) {
       if (isFlag) return;
       const errorArr = [pos];
-      this.gameOver({ errorArr });
+      this.gameOver({ errorArr, reason: "mine" });
     },
 
     /**
@@ -407,11 +541,12 @@ export default {
      */
     pickNumber(item) {
       const { boardData } = this;
+      const tipIndices = this.neighborIndices(item.pos);
       this.tipUserSudoForPos(item);
       document.onmouseup = () => {
-        for (let i = 0; i < boardData.length; i++) {
-          const theOne = boardData[i];
-          theOne.isTip = false;
+        for (let i = 0; i < tipIndices.length; i++) {
+          const cell = boardData[tipIndices[i]];
+          if (cell) cell.isTip = false;
         }
         document.onmouseup = null;
       };
@@ -425,11 +560,11 @@ export default {
       let flagCount = 0;
       const mineArr = [];
       const flagArr = [];
-      const sudoku = this.requestPos(pos);
-      for (let i = 0; i < sudoku.length; i++) {
-        const idx = this.calcIdx(sudoku[i]);
-        const item = boardData[idx];
-        if (item && !item.isCheck) {
+      const neighbors = this.neighborIndices(pos);
+      for (let i = 0; i < neighbors.length; i++) {
+        const item = boardData[neighbors[i]];
+        if (!item) continue;
+        if (!item.isCheck && !item.isFlag) {
           item.isTip = true;
         }
         if (item.type == "mine") {
@@ -448,7 +583,7 @@ export default {
         if (bool) {
           this.handleSpace(pos);
         } else {
-          this.gameOver({ notArr, errorArr });
+          this.gameOver({ notArr, errorArr, reason: "chord" });
         }
       }
     },
@@ -456,14 +591,20 @@ export default {
     /**
      * 游戏结束
      */
-    gameOver({ notArr = [], errorArr = [] }) {
+    gameOver({ notArr = [], errorArr = [], reason = "mine" }) {
       this.gameIsOver = true;
+      this.stopTimer();
       const { boardData } = this;
+      const opened = boardData.filter(
+        (item) => item.isCheck && item.type !== "mine"
+      ).length;
       boardData.map((item) => {
         item.isCheck = true;
         item.isTip = false;
         item.isFlag = false;
       });
+      this.flagCount = 0;
+      this.safeRemaining = 0;
       for (let i = 0; i < notArr.length; i++) {
         const idx = this.calcIdx(notArr[i]);
         boardData[idx].type = "mineSuccess";
@@ -476,9 +617,14 @@ export default {
         type: "danger",
         content: "游戏失败",
       });
-      this.HiImg({ type: "fail" });
-      clearInterval(this.elapsedTimer);
-      this.elapsedTimer = null;
+      this.HiImg({
+        type: "fail",
+        reason,
+        time: this.elapsedTime,
+        opened,
+        mines: 1,
+        difficulty: this.difficultyLabel(),
+      });
     },
 
     /**
@@ -516,53 +662,57 @@ export default {
     },
 
     /**
-     * 点击空白处递归方法
+     * 点击空白处展开（显式栈，避免递归深度）
      */
     handleSpace(arr) {
       const { boardData } = this;
-      const sudoku = this.requestPos(arr);
-      for (let i = 0; i < sudoku.length; i++) {
-        const idx = this.calcIdx(sudoku[i]);
-        const item = boardData[idx];
-        if (item == undefined) {
-          continue;
-        }
-        if (item.isRepeat === "not") {
+      const startItem = boardData[this.calcIdx(arr)];
+      if (startItem && startItem.isRepeat === "not") {
+        startItem.isRepeat = "is";
+      }
+      const stack = [arr];
+      while (stack.length) {
+        const pos = stack.pop();
+        const neighbors = this.neighborIndices(pos);
+        for (let i = 0; i < neighbors.length; i++) {
+          const item = boardData[neighbors[i]];
+          if (!item || item.isRepeat !== "not") continue;
           item.isRepeat = "is";
           if (item.type !== "mine") {
+            if (!item.isCheck) {
+              this.safeRemaining -= 1;
+            }
             item.isCheck = true;
-            item.isFlag = false;
+            if (item.isFlag) {
+              item.isFlag = false;
+              this.flagCount -= 1;
+            }
           }
-          if (item.type === "number") {
-            continue;
-          }
+          if (item.type === "number") continue;
           if (item.type === "null") {
-            this.handleSpace(item.pos);
+            stack.push(item.pos);
           }
         }
       }
     },
 
     /**
-     * 传入坐标返回九宫格的二维数组
+     * 传入坐标返回九宫格索引（越界裁剪）
      */
-    requestPos([x, y]) {
-      const [maxX, maxY] = this.boardSize;
-      const arr = [
-        [x - 1, y - 1],
-        [x, y - 1],
-        [x + 1, y - 1],
-        [x - 1, y],
-        [x + 1, y],
-        [x - 1, y + 1],
-        [x, y + 1],
-        [x + 1, y + 1],
-      ];
-      const filterArr = arr.filter(
-        ([posX, posY]) =>
-          !(posX < 0 || posY < 0 || posX >= maxX || posY >= maxY)
-      );
-      return filterArr;
+    neighborIndices([x, y]) {
+      const [cols, rows] = this.boardSize;
+      const indices = [];
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= rows) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          if (nx < 0 || nx >= cols) continue;
+          indices.push(ny * cols + nx);
+        }
+      }
+      return indices;
     },
 
     /**
