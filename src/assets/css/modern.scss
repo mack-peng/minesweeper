@@ -2,6 +2,15 @@
  * 连续流式响应式：字号 / 间距 / 控件 / 舞台 / 棋盘全部以 vw + clamp 随屏宽逐像素缩放，
  * 断点只保留“显隐语义”（HUD 标题独占一行、ConfigSelect 标签隐藏、D-pad 显隐）。
  */
+html {
+  touch-action: manipulation;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
 :root {
   --ui-text: #e2e8f0;
   --ui-dim: #94a3b8;
@@ -45,6 +54,9 @@
   gap: var(--gap-hud);
   min-height: 72px;
   padding: var(--space-hud-y) var(--space-hud-x);
+  padding-top: calc(
+    var(--space-hud-y) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+  );
   background: var(--ui-panel);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

@@ -103,6 +103,7 @@ export default {
 .result-card {
   box-sizing: border-box;
   width: min(420px, 100%);
+  max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
   padding: 24px;
@@ -182,6 +183,7 @@ export default {
 .result-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  grid-gap: 12px;
   gap: 12px;
   margin: 18px 0;
   padding-top: 16px;

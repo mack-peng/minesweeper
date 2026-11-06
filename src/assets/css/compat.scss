@@ -1,0 +1,146 @@
+/* Chrome 61 baseline fallbacks.
+ * Only active when clamp() is unavailable; modern engines keep the enhancement layer.
+ */
+
+@supports not (width: clamp(1px, 2px, 3px)) {
+  :root {
+    --space-hud-y: 10px;
+    --space-hud-x: 16px;
+    --gap-hud: 8px;
+    --font-title: 18px;
+    --font-ui: 13px;
+    --font-chip: 12px;
+  }
+
+  .hud {
+    background: rgba(15, 23, 42, 0.9);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .hud > * + *,
+  .hud_stats > * + *,
+  .hud_controls > * + * {
+    margin-left: var(--gap-hud);
+  }
+
+  .hud_brand {
+    margin-right: 4px;
+  }
+
+  @media (max-width: 767.98px) {
+    .hud > * + * {
+      margin-left: 0;
+    }
+
+    .hud_brand {
+      margin-right: 0;
+    }
+  }
+
+  .hud_brand > * + * {
+    margin-left: 8px;
+  }
+
+  .hud_spacer {
+    flex: 1 1 16px;
+  }
+
+  .chip {
+    padding: 5px 10px;
+  }
+
+  .chip > * + *,
+  .config-select > * + * {
+    margin-left: 6px;
+  }
+
+  .btn {
+    padding: 7px 12px;
+    border-radius: 10px;
+  }
+
+  .select {
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 9px;
+  }
+
+  .stage-panel {
+    width: calc(100vw - 20px);
+    max-width: 1040px;
+    margin: 16px auto;
+    border-radius: 12px;
+  }
+
+  .hud_title {
+    font-size: 18px;
+  }
+
+  .hud_title small {
+    font-size: 10px;
+  }
+
+  .page-shell::before,
+  .awe_back {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .awe_back {
+    background: rgba(2, 4, 8, 0.88);
+  }
+
+  .result-card {
+    width: calc(100% - 32px);
+    max-width: 420px;
+    max-height: calc(100vh - 32px);
+  }
+
+  .awe_img {
+    height: 210px;
+  }
+
+  .result-stats {
+    grid-gap: 12px;
+  }
+
+  .alert_style {
+    width: 100%;
+    max-width: 500px;
+  }
+
+  /* Board sizing without clamp()/min()/dvh: width-first, then viewport-height guard. */
+  .board.board {
+    --cell: calc((100vw - 50px) / var(--cols, 10));
+    max-width: calc(var(--cols, 10) * 36px);
+  }
+
+  @media (min-width: 768px) {
+    .board.board {
+      --cell: calc((100vh - 140px) / var(--rows, 20));
+    }
+  }
+
+  @media (max-height: 520px) {
+    .board.board {
+      --cell: calc((100vh - 120px) / var(--rows, 20));
+    }
+  }
+
+  .sigleCheck {
+    height: var(--cell);
+    font-size: 12px;
+  }
+
+  .dpad.dpad {
+    --pad: 52px;
+    grid-gap: 6px;
+  }
+
+  .pad {
+    font-size: 16px;
+  }
+}

@@ -2,8 +2,40 @@ import { defineConfig } from "vite";
 import vue2 from "@vitejs/plugin-vue2";
 import path from "node:path";
 
+function classicScript() {
+  return {
+    name: "classic-script",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        return html
+          .replace(
+            /<script type="module" crossorigin src=/g,
+            "<script defer src="
+          )
+          .replace(/ crossorigin/g, "")
+          .replace(/<link rel="modulepreload"[^>]*>\s*/g, "");
+      },
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [vue2()],
+  base: "./",
+  plugins: [vue2(), classicScript()],
+  build: {
+    target: ["es2017", "chrome61"],
+    cssTarget: "chrome61",
+    copyPublicDir: false,
+    modulePreload: { polyfill: false },
+    rollupOptions: {
+      output: {
+        format: "iife",
+        inlineDynamicImports: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
