@@ -55,7 +55,8 @@ body {
   min-height: 72px;
   padding: var(--space-hud-y) var(--space-hud-x);
   padding-top: calc(
-    var(--space-hud-y) + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+    var(--space-hud-y) +
+    var(--app-top-total, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
   );
   background: var(--ui-panel);
   backdrop-filter: blur(12px);
@@ -238,6 +239,10 @@ body {
     flex-wrap: nowrap;
     gap: 6px;
     padding: 6px 12px;
+    padding-top: calc(
+      6px +
+      var(--app-top-total, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    );
   }
 
   .hud_brand,

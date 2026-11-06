@@ -10,6 +10,7 @@ import "@style/compat.scss";
 
 import FUNCTION from "./utils/test.js";
 import directive from "./utils/directive.js";
+import { applyTopInset } from "./utils/windowInfo.js";
 
 for (const I in FUNCTION) {
   Vue.prototype[I] = FUNCTION[I];
@@ -17,6 +18,8 @@ for (const I in FUNCTION) {
 for (const I in directive) {
   Vue.directive(I, directive[I]);
 }
+
+applyTopInset();
 
 new Vue({
   el: "#app",

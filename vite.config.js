@@ -2,6 +2,14 @@ import { defineConfig } from "vite";
 import vue2 from "@vitejs/plugin-vue2";
 import path from "node:path";
 
+function inlineSweepIcons(filePath) {
+  return /[\\/]src[\\/]assets[\\/]img[\\/]sweep[\\/](flag|mine|mineNot|mineError|mineSuccess)\.png$/.test(
+    filePath
+  )
+    ? true
+    : undefined;
+}
+
 function classicScript() {
   return {
     name: "classic-script",
@@ -24,11 +32,17 @@ function classicScript() {
 export default defineConfig({
   base: "./",
   plugins: [vue2(), classicScript()],
+  experimental: {
+    renderBuiltUrl(filename) {
+      return `./${filename}`;
+    },
+  },
   build: {
     target: ["es2017", "chrome61"],
     cssTarget: "chrome61",
     copyPublicDir: false,
     modulePreload: { polyfill: false },
+    assetsInlineLimit: inlineSweepIcons,
     rollupOptions: {
       output: {
         format: "iife",

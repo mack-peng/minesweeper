@@ -20,6 +20,57 @@
   }
 }
 
+.board-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+}
+
+.flag-toggle {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  margin-top: 14px;
+  padding: 0;
+  border: 2px solid var(--ui-line);
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.88);
+  color: var(--ui-text);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.08s ease, box-shadow 0.15s ease;
+}
+
+.flag-toggle:active {
+  transform: scale(0.96);
+}
+
+.flag-toggle--on {
+  background: var(--accent, #2dd4bf);
+  border-color: transparent;
+  color: #0b1220;
+  box-shadow: 0 10px 28px rgba(45, 212, 191, 0.35);
+}
+
+.flag-toggle_icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.flag-toggle_label {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
 .board-tray {
   box-sizing: border-box;
   max-width: calc(100vw - 28px);
@@ -33,7 +84,10 @@
 /* 格子随屏宽/屏高连续缩放：封顶 36px、下限 6px（hell 45 列也放得下） */
 .board {
   --cols: 10;
-  --hud-offset: 104px;
+  --flag-area: 96px;
+  --hud-offset: calc(
+    104px + var(--app-top-total, 0px) + var(--flag-area)
+  );
   --cell: clamp(
     6px,
     min(
@@ -53,19 +107,64 @@
 
 @media (max-width: 1023.98px) {
   .board {
-    --hud-offset: 110px;
+    --hud-offset: calc(
+      110px + var(--app-top-total, 0px) + var(--flag-area)
+    );
   }
 }
 
 @media (max-width: 767.98px) {
   .board {
-    --hud-offset: 140px;
+    --hud-offset: calc(
+      140px + var(--app-top-total, 0px) + var(--flag-area)
+    );
   }
 }
 
 @media (max-height: 520px) {
   .board {
-    --hud-offset: 120px;
+    --flag-area: 68px;
+    --hud-offset: calc(
+      120px + var(--app-top-total, 0px) + var(--flag-area)
+    );
+  }
+
+  .flag-toggle {
+    width: 56px;
+    height: 56px;
+    margin-top: 8px;
+  }
+
+  .flag-toggle_icon {
+    font-size: 20px;
+  }
+
+  .flag-toggle_label {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 767.98px) and (min-height: 521px) and (max-height: 700px) {
+  .board-panel {
+    padding-top: 24px;
+  }
+
+  .board {
+    --flag-area: 68px;
+  }
+
+  .flag-toggle {
+    width: 56px;
+    height: 56px;
+    margin-top: 8px;
+  }
+
+  .flag-toggle_icon {
+    font-size: 20px;
+  }
+
+  .flag-toggle_label {
+    font-size: 10px;
   }
 }
 
@@ -139,6 +238,7 @@
 .sigleCheck.isCheck.flag {
   background: url("@image/sweep/flag.png") no-repeat center center;
   background-size: 70% 70%;
+  background-color: rgba(248, 113, 113, 0.25);
 }
 
 /* 移动端 HUD：chips+下拉一行，两按钮等宽占满下一行 */

@@ -120,13 +120,13 @@
 
   @media (min-width: 768px) {
     .board.board {
-      --cell: calc((100vh - 140px) / var(--rows, 20));
+      --cell: calc((100vh - var(--hud-offset, 140px)) / var(--rows, 20));
     }
   }
 
   @media (max-height: 520px) {
     .board.board {
-      --cell: calc((100vh - 120px) / var(--rows, 20));
+      --cell: calc((100vh - var(--hud-offset, 120px)) / var(--rows, 20));
     }
   }
 

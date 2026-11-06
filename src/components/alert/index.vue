@@ -26,6 +26,7 @@ export default {
 .alert_box {
   position: fixed;
   top: 88px;
+  top: calc(88px + var(--app-top-total, 0px));
   left: 0;
   right: 0;
   z-index: 30;
@@ -114,18 +115,21 @@ export default {
 @media (max-width: 1023.98px) {
   .alert_box {
     top: 96px;
+    top: calc(96px + var(--app-top-total, 0px));
   }
 }
 
 @media (max-width: 767.98px) {
   .alert_box {
     top: 144px;
+    top: calc(144px + var(--app-top-total, 0px));
   }
 }
 
 @media (max-height: 520px) {
   .alert_box {
     top: 64px;
+    top: calc(64px + var(--app-top-total, 0px));
   }
 }
 </style>
