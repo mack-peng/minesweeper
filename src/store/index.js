@@ -61,12 +61,16 @@ const store = new Vuex.Store({
      * 初始化store（sessionStorage 快照恢复）
      */
     initStore(state, _this) {
-      if (GET_SESSION("store")) {
+      const snapshot = GET_SESSION("store");
+      if (!snapshot) return;
+      try {
         _this.$store.replaceState(
-          Object.assign({}, state, JSON.parse(GET_SESSION("store")))
+          Object.assign({}, state, JSON.parse(snapshot))
         );
-        DEL_SESSION("store");
+      } catch (error) {
+        // Ignore corrupted or unavailable browser storage snapshots
       }
+      DEL_SESSION("store");
     },
   },
 });

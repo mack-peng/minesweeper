@@ -24,6 +24,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(3, var(--pad));
   grid-template-rows: repeat(2, calc(var(--pad) * 0.9));
+  grid-gap: 6px;
   gap: clamp(4px, 1vw, 8px);
   justify-content: center;
   user-select: none;
