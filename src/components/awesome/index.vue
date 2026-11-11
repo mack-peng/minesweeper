@@ -6,7 +6,7 @@
         :class="cartoon.type === 'win' ? 'result-win' : 'result-lose'"
       >
         <div class="result-media">
-          <img class="awe_img" :src="imgUrl" alt />
+          <img ref="resultImage" class="awe_img" :src="imgUrl" alt />
           <span class="result-badge">{{ cartoon.type === "win" ? "WIN" : "LOSE" }}</span>
           <button class="result-close" type="button" @click="hideThere">×</button>
         </div>
@@ -37,6 +37,14 @@
         <button class="result-btn result-btn--primary" type="button" @click="restart">
           再来一局
         </button>
+        <button
+          class="result-btn result-btn--share"
+          type="button"
+          :disabled="sharing"
+          @click="shareResult"
+        >
+          {{ sharing ? "生成中…" : "分享战绩" }}
+        </button>
         <button class="result-btn result-btn--ghost" type="button" @click="hideThere">
           关闭
         </button>
@@ -52,7 +60,34 @@ const imgs = import.meta.glob("../../assets/img/winOrFail/*.jpg", {
   import: "default",
 });
 
+const SHARE_TITLES = {
+  win: {
+    普通: "扫雷普通难度，谁来挑战我？",
+    困难: "扫雷困难难度，这波通关了！",
+    疯狂: "扫雷疯狂难度，我稳住了！",
+    地狱: "扫雷地狱难度，我做到了！",
+    default: "扫雷通关，谁来挑战我？",
+  },
+  fail: {
+    普通: "扫雷普通难度，翻车了 😭",
+    困难: "扫雷困难难度，求大神带！",
+    疯狂: "扫雷疯狂难度，教我做人 😭",
+    地狱: "扫雷地狱难度，我尽力了…",
+    default: "扫雷翻车了，求大神带！",
+  },
+};
+
+const SHARE_CTAS = {
+  win: "你能比我更快吗？来一局试试，评论区晒晒你的成绩～",
+  fail: "你们能撑到第几格？来一局帮我报仇～",
+};
+
 export default {
+  data() {
+    return {
+      sharing: false,
+    };
+  },
   computed: {
     imgUrl() {
       const { type } = this.cartoon;
@@ -81,6 +116,290 @@ export default {
     restart() {
       this.$root.$emit("minesweeper:restart");
     },
+    async shareResult() {
+      if (this.sharing) return;
+      this.sharing = true;
+      try {
+        const dataUrl = await this.buildShareImage();
+        const outcome = await this.webShare(dataUrl);
+        if (outcome === "shared" || outcome === "cancelled") return;
+        this.downloadShareImage(dataUrl);
+        this.HiAlert({
+          type: "success",
+          content:
+            outcome === "failed"
+              ? "系统分享失败，已保存到本地"
+              : "战绩图已保存到本地",
+        });
+      } catch (error) {
+        this.HiAlert({
+          type: "warning",
+          content: "分享未完成，请稍后重试",
+        });
+      } finally {
+        this.sharing = false;
+      }
+    },
+    async webShare(dataUrl) {
+      if (!navigator.share) return "unsupported";
+      let file;
+      try {
+        file = this.dataUrlToFile(dataUrl);
+      } catch (error) {
+        return "failed";
+      }
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+        return "unsupported";
+      }
+      let timer;
+      try {
+        await Promise.race([
+          navigator.share({
+            files: [file],
+            title: this.shareTitle(),
+            text: this.shareContent(),
+          }),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error("share-timeout")), 10000);
+          }),
+        ]);
+        clearTimeout(timer);
+        return "shared";
+      } catch (error) {
+        clearTimeout(timer);
+        if (error && error.name === "AbortError") return "cancelled";
+        return "failed";
+      }
+    },
+    dataUrlToFile(dataUrl) {
+      const [head, body] = dataUrl.split(",");
+      const mime = /:(.*?);/.exec(head)[1];
+      const binary = window.atob(body);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new File([bytes], "minesweeper-result.png", { type: mime });
+    },
+    downloadShareImage(dataUrl) {
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `minesweeper-${
+        this.cartoon.type === "win" ? "win" : "lose"
+      }.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    },
+    buildShareImage() {
+      return new Promise((resolve, reject) => {
+        const image = this.$refs.resultImage;
+        const draw = () => {
+          try {
+            resolve(this.drawShareImage(image));
+          } catch (error) {
+            reject(error);
+          }
+        };
+        if (!image || image.complete) {
+          draw();
+          return;
+        }
+
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          draw();
+        };
+        const timer = setTimeout(finish, 1000);
+        image.addEventListener("load", finish, { once: true });
+        image.addEventListener("error", finish, { once: true });
+      });
+    },
+    drawShareImage(image, withoutImage) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 750;
+      canvas.height = 1000;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("canvas");
+
+      const win = this.cartoon.type === "win";
+      const accent = win ? "#2dd4bf" : "#f87171";
+      const font =
+        '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+
+      const background = ctx.createLinearGradient(0, 0, 750, 1000);
+      background.addColorStop(0, win ? "#123236" : "#33191f");
+      background.addColorStop(0.45, "#0b1220");
+      background.addColorStop(1, "#070b14");
+      ctx.fillStyle = background;
+      ctx.fillRect(0, 0, 750, 1000);
+
+      const glow = ctx.createRadialGradient(375, 150, 0, 375, 150, 520);
+      glow.addColorStop(
+        0,
+        win ? "rgba(45,212,191,0.2)" : "rgba(248,113,113,0.18)"
+      );
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, 750, 1000);
+
+      const card = { x: 44, y: 44, width: 662, height: 912, radius: 36 };
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 46;
+      ctx.shadowOffsetY = 18;
+      ctx.fillStyle = "#0f1a2e";
+      this.roundRect(ctx, card.x, card.y, card.width, card.height, card.radius);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.strokeStyle = "rgba(148,163,184,0.24)";
+      ctx.lineWidth = 2;
+      this.roundRect(ctx, card.x, card.y, card.width, card.height, card.radius);
+      ctx.stroke();
+
+      const media = { x: 66, y: 66, width: 618, height: 366, radius: 22 };
+      ctx.save();
+      this.roundRect(ctx, media.x, media.y, media.width, media.height, media.radius);
+      ctx.clip();
+
+      if (image && image.naturalWidth) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(media.x, media.y, media.width, media.height);
+        const scale = Math.min(
+          media.width / image.naturalWidth,
+          media.height / image.naturalHeight
+        );
+        const width = image.naturalWidth * scale;
+        const height = image.naturalHeight * scale;
+        ctx.drawImage(
+          image,
+          media.x + (media.width - width) / 2,
+          media.y + (media.height - height) / 2,
+          width,
+          height
+        );
+      } else {
+        const mediaGradient = ctx.createLinearGradient(
+          media.x,
+          media.y,
+          media.x + media.width,
+          media.y + media.height
+        );
+        mediaGradient.addColorStop(0, "#1e293b");
+        mediaGradient.addColorStop(1, "#0b1220");
+        ctx.fillStyle = mediaGradient;
+        ctx.fillRect(media.x, media.y, media.width, media.height);
+      }
+
+      const shade = ctx.createLinearGradient(
+        0,
+        media.y + media.height - 100,
+        0,
+        media.y + media.height
+      );
+      shade.addColorStop(0, "rgba(11,18,32,0)");
+      shade.addColorStop(1, "rgba(11,18,32,0.55)");
+      ctx.fillStyle = shade;
+      ctx.fillRect(media.x, media.y + media.height - 100, media.width, 100);
+      ctx.restore();
+
+      ctx.fillStyle = accent;
+      this.roundRect(ctx, media.x + 22, media.y + 22, 96, 44, 22);
+      ctx.fill();
+      ctx.fillStyle = "#0b1220";
+      ctx.font = "bold 22px " + font;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(win ? "WIN" : "LOSE", media.x + 22 + 48, media.y + 22 + 22);
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "bold 56px " + font;
+      ctx.fillText(win ? "你赢了" : "游戏失败", 66, 476);
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "26px " + font;
+      ctx.fillText(this.subtitle, 66, 554);
+
+      ctx.strokeStyle = "rgba(148,163,184,0.25)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(66, 614);
+      ctx.lineTo(684, 614);
+      ctx.stroke();
+
+      const stats = this.shareStats();
+      const columns = [66, 274, 482];
+      stats.forEach((item, index) => {
+        const x = columns[index];
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "24px " + font;
+        ctx.fillText(item.label, x, 648);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "36px " + font;
+        ctx.fillText(item.value, x, 684);
+      });
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "22px " + font;
+      ctx.fillText("扫雷 · MINESWEEPER", 66, 906);
+
+      try {
+        return canvas.toDataURL("image/png");
+      } catch (error) {
+        if (withoutImage) throw error;
+        return this.drawShareImage(null, true);
+      }
+    },
+    roundRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    },
+    shareStats() {
+      const win = this.cartoon.type === "win";
+      const thirdLabel = win
+        ? "地雷"
+        : this.cartoon.reason === "chord"
+        ? "误判"
+        : "踩雷";
+      return [
+        { label: "用时", value: this.cartoon.time || "00:00:00" },
+        { label: "翻开", value: String(this.cartoon.opened || 0) },
+        {
+          label: thirdLabel,
+          value: String(win ? this.cartoon.mines || 0 : 1),
+        },
+      ];
+    },
+    shareTitle() {
+      const titles = this.cartoon.type === "win" ? SHARE_TITLES.win : SHARE_TITLES.fail;
+      const title = titles[this.cartoon.difficulty] || titles.default;
+      return Array.from(title).slice(0, 20).join("");
+    },
+    shareContent() {
+      const win = this.cartoon.type === "win";
+      const result = win
+        ? `${this.cartoon.mines || 0} 颗雷全部排除`
+        : this.cartoon.reason === "chord"
+        ? "九宫格误判"
+        : "踩到地雷";
+      const cta = win ? SHARE_CTAS.win : SHARE_CTAS.fail;
+      return `用时 ${this.cartoon.time || "00:00:00"}，翻开 ${
+        this.cartoon.opened || 0
+      } 格，${result}。${cta} #扫雷 #小游戏`;
+    },
   },
 };
 </script>
@@ -103,6 +422,7 @@ export default {
 .result-card {
   box-sizing: border-box;
   width: min(420px, 100%);
+  max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
   padding: 24px;
@@ -182,6 +502,7 @@ export default {
 .result-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  grid-gap: 12px;
   gap: 12px;
   margin: 18px 0;
   padding-top: 16px;
@@ -216,6 +537,19 @@ export default {
   background: #2dd4bf;
   color: #0b1220;
   font-weight: 600;
+}
+
+.result-btn--share {
+  margin-top: 10px;
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #2dd4bf;
+  font-weight: 600;
+}
+
+.result-btn[disabled] {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .result-btn--ghost {
