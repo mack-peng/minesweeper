@@ -24,10 +24,6 @@
           :current="defaultMode"
           @apply="sideBarMethod"
         />
-        <button class="btn" :class="{ 'btn--on': flagMode }" @click="toggleFlagMode">
-          <span class="label-full">🚩 插旗模式</span>
-          <span class="label-short">🚩 插旗</span>
-        </button>
         <button class="btn btn--accent" @click="onRestart">
           <span class="label-full">重新开始</span>
           <span class="label-short">重开</span>
@@ -35,25 +31,37 @@
       </div>
     </header>
     <main class="board-panel">
-      <div class="board-tray">
-        <div class="board cl" :style="boardStyle">
-          <div
-            v-for="(item, idx) in boardData"
-            :key="idx"
-            :style="item.styles"
-            :class="{
-              [item.type]: true,
-              isCheck: !item.isCheck,
-              isTip: item.isTip,
-              flag: item.isFlag,
-            }"
-            class="sigleCheck"
-            @contextmenu.prevent="onContextMenu(item)"
-            @mousedown="clickBoard($event, item)"
-          >
-            {{ item.isCheck ? item.number : "" }}
+      <div class="board-area">
+        <div class="board-tray">
+          <div class="board cl" :style="boardStyle">
+            <div
+              v-for="(item, idx) in boardData"
+              :key="idx"
+              :style="item.styles"
+              :class="{
+                [item.type]: true,
+                isCheck: !item.isCheck,
+                isTip: item.isTip,
+                flag: item.isFlag,
+              }"
+              class="sigleCheck"
+              @contextmenu.prevent="onContextMenu(item)"
+              @mousedown="clickBoard($event, item)"
+            >
+              {{ item.isCheck ? item.number : "" }}
+            </div>
           </div>
         </div>
+        <button
+          class="flag-toggle"
+          :class="{ 'flag-toggle--on': flagMode }"
+          type="button"
+          :aria-pressed="flagMode"
+          @click="toggleFlagMode"
+        >
+          <span class="flag-toggle_icon" aria-hidden="true">🚩</span>
+          <span class="flag-toggle_label">{{ flagMode ? "插旗中" : "插旗模式" }}</span>
+        </button>
       </div>
     </main>
   </div>
